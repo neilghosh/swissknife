@@ -155,12 +155,36 @@
                 <span id="next-new-moon">--</span>
             </div>
             <div class="solar-event">
+                <span class="solar-label">🌚 Last New Moon</span>
+                <span id="last-new-moon">--</span>
+            </div>
+            <div class="solar-event">
                 <span class="solar-label">🌕 Next Full Moon</span>
                 <span id="next-full-moon">--</span>
+            </div>
+            <div class="solar-event">
+                <span class="solar-label">🌝 Last Full Moon</span>
+                <span id="last-full-moon">--</span>
             </div>
         </div>
 
         <div id="error-msg" class="hidden"></div>
+
+        <div class="external-links"
+            style="margin-top: 2rem; border-top: 1px solid #334155; padding-top: 1rem; font-size: 0.9rem;">
+            <div id="skymap-container"
+                style="width: 100%; height: 350px; border-radius: 8px; overflow: hidden; margin-top: 1rem;">
+                <!-- VirtualSky iframe will be injected here -->
+            </div>
+            Powered by <a href="https://lco.global/spacebook/sky-map/" target="_blank" style="color: #64748b;">LCO
+                VirtualSky</a>
+        </div>
+        <div style="margin-top: 1rem; border-top: 1px dotted #334155; padding-top: 0.5rem;">
+            <a id="ha-link" href="#" target="_blank"
+                style="color: #38bdf8; text-decoration: none; border-bottom: 1px dotted #38bdf8;">View Sky Chart on
+                Heavens-Above</a>
+        </div>
+    </div>
     </div>
 
     <script>
@@ -168,20 +192,45 @@
         function updateClock() {
             const now = new Date();
 
-            // Helper to format as YYYY-MM-DD HH:MM:SS
+            // Helper to format as: Fri, 02 Jan 26
             const formatTime = (date, isUTC) => {
                 const pad = (n) => n.toString().padStart(2, '0');
-                const year = isUTC ? date.getUTCFullYear() : date.getFullYear();
-                const month = pad(isUTC ? date.getUTCMonth() + 1 : date.getMonth() + 1);
+
+                // Day of week
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayName = isUTC ? days[date.getUTCDay()] : days[date.getDay()];
+
+                // Month names (3-letter)
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthName = isUTC ? months[date.getUTCMonth()] : months[date.getMonth()];
+
+                const year = isUTC ? date.getUTCFullYear().toString().slice(-2) : date.getFullYear().toString().slice(-2);
                 const day = pad(isUTC ? date.getUTCDate() : date.getDate());
+
                 const hours = pad(isUTC ? date.getUTCHours() : date.getHours());
                 const minutes = pad(isUTC ? date.getUTCMinutes() : date.getMinutes());
                 const seconds = pad(isUTC ? date.getUTCSeconds() : date.getSeconds());
-                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+                return `${dayName}, ${day} ${monthName} ${year} ${hours}:${minutes}:${seconds}`;
             };
 
             document.getElementById('utc-time').innerText = formatTime(now, true) + ' UTC';
-            document.getElementById('local-time').innerText = formatTime(now, false) + ' Local';
+
+            // Get local timezone abbreviation if possible
+            let tzName = '';
+            try {
+                // Try to get short timezone name (e.g. PST, IST, EST)
+                tzName = new Date().toLocaleTimeString('en-us', { timeZoneName: 'short' }).split(' ').pop();
+                // If it's something like "GMT+5:30", we keep it. 
+                // Sometimes it might return just "PM" if split fails or format is different, so let's be careful.
+                const parts = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(now);
+                const tzPart = parts.find(p => p.type === 'timeZoneName');
+                if (tzPart) tzName = tzPart.value;
+            } catch (e) {
+                tzName = 'Local';
+            }
+
+            document.getElementById('local-time').innerText = formatTime(now, false) + ' ' + tzName;
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -280,6 +329,65 @@
             initialState.classList.add('hidden');
             loadingState.classList.add('hidden');
             dataState.classList.remove('hidden');
+
+            updateExternalLinks(lat, lng);
+        }
+
+        function updateExternalLinks(lat, lng) {
+            const container = document.getElementById('skymap-container');
+            // Clean up existing iframes
+            container.innerHTML = '';
+
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+
+            // Build VirtualSky URL
+            // Docs: https://lco.global/virtualsky/
+            const baseUrl = "https://virtualsky.lco.global/embed/index.html";
+            const params = new URLSearchParams({
+                longitude: lng,
+                latitude: lat,
+                projection: 'stereo',
+                constellations: 'true',
+                constellationlabels: 'true',
+                showstarlabels: 'true',
+                showplanets: 'true',
+                showplanetlabels: 'true',
+                showdate: 'false', // We show date elsewhere
+                showposition: 'false',
+                live: 'true', // Auto update time
+                az: 180, // Facing South by default
+                background: 'rgba(0,0,0,0)', // Transparent to blend with our dark theme? Or just dark.
+                // Actually transparent might be hard to read on some backgrounds, lets use a dark hex
+                // VirtualSky background param takes css color.
+                // Our card is #1e293b. Lets match it or go slightly darker.
+                color: 'white',
+            });
+
+            iframe.src = `${baseUrl}?${params.toString()}`;
+            container.appendChild(iframe);
+
+            // Update Heavens-Above Link as well
+            const haLink = document.getElementById('ha-link');
+            // Calculate Heavens-Above timezone parameter
+            // Format: UCT[m]H[colonM]
+            const offset = new Date().getTimezoneOffset();
+
+            let tzParam = 'UCT';
+            if (offset !== 0) {
+                if (offset < 0) tzParam += 'm';
+                const absOffset = Math.abs(offset);
+                const hours = Math.floor(absOffset / 60);
+                const mins = absOffset % 60;
+                tzParam += hours;
+                if (mins > 0) tzParam += 'colon' + mins;
+            }
+
+            const haUrl = `https://heavens-above.com/main.aspx?lat=${lat}&lng=${lng}&loc=Unnamed&alt=0&tz=${tzParam}`;
+            haLink.href = haUrl;
+            haLink.innerText = `View Sky Chart on Heavens-Above (Lat: ${lat.toFixed(2)}, Lng: ${lng.toFixed(2)})`;
         }
 
         function error(err) {
@@ -328,8 +436,15 @@
                     const sunrise = new Date(data.results.sunrise);
                     const sunset = new Date(data.results.sunset);
 
-                    document.getElementById('sunrise-time').innerText = sunrise.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    document.getElementById('sunset-time').innerText = sunset.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const now = new Date();
+
+                    const timeStr = (date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    document.getElementById('sunrise-time').innerText =
+                        `${timeStr(sunrise)} (${getRelativeTime(sunrise)})`;
+
+                    document.getElementById('sunset-time').innerText =
+                        `${timeStr(sunset)} (${getRelativeTime(sunset)})`;
 
                     loadingState.classList.add('hidden');
                     dataState.classList.remove('hidden');
@@ -350,17 +465,93 @@
             const phaseName = getMoonPhaseName(phase);
             document.getElementById('moon-phase').innerText = phaseName;
 
-            // Next New Moon
+            const updateElement = (id, eventDate) => {
+                const el = document.getElementById(id);
+                if (el && eventDate) {
+                    const params = { weekday: 'short', year: '2-digit', month: 'short', day: 'numeric' };
+                    const dateStr = eventDate.toLocaleDateString(undefined, params);
+                    el.innerText = `${dateStr} (${getRelativeTime(eventDate)})`;
+                }
+            };
+
+            // Helpers to find moon phases
+            // Next New Moon (Phase 0)
             const nextNew = Astronomy.SearchMoonPhase(0, date, 30);
-            if (nextNew) {
-                document.getElementById('next-new-moon').innerText = nextNew.date.toLocaleDateString();
+            if (nextNew) updateElement('next-new-moon', nextNew.date);
+
+            // Last New Moon (Phase 0) - Search starting from 35 days ago to find the one just before now
+            const pastDate = new Date(date.getTime() - 35 * 24 * 60 * 60 * 1000);
+            const lastNew = Astronomy.SearchMoonPhase(0, pastDate, 30); // Should find the one ~5 day ago or ~30 days ago
+            // We want to ensure it is indeed in the past. If search found one in future relative to now (unlikely if we started 35 days ago), ignore.
+            // Actually simpler: Search 2 phases starting 60 days ago, pick the last one < now.
+            // But 'SearchMoonPhase' finds the *first* occurrence after date.
+            // So logic: Start -40 days. Find occurrence. 
+            // If occurrence < now, that is a candidate. 
+            // Search again from occurrence + 1 minute.
+            // Keep strictly < now.
+            {
+                // Robust "Last" finder
+                let d = new Date(date.getTime() - 45 * 24 * 60 * 60 * 1000); // 45 days ago
+                let found = null;
+                for (let i = 0; i < 3; i++) {
+                    const m = Astronomy.SearchMoonPhase(0, d, 45);
+                    if (m && m.date < date) {
+                        found = m.date;
+                        d = new Date(m.date.getTime() + 1000); // Advance slightly
+                    } else {
+                        break;
+                    }
+                }
+                if (found) updateElement('last-new-moon', found);
             }
 
-            // Next Full Moon
+
+            // Next Full Moon (Phase 180)
             const nextFull = Astronomy.SearchMoonPhase(180, date, 30);
-            if (nextFull) {
-                document.getElementById('next-full-moon').innerText = nextFull.date.toLocaleDateString();
+            if (nextFull) updateElement('next-full-moon', nextFull.date);
+
+            // Last Full Moon
+            {
+                let d = new Date(date.getTime() - 45 * 24 * 60 * 60 * 1000);
+                let found = null;
+                for (let i = 0; i < 3; i++) {
+                    const m = Astronomy.SearchMoonPhase(180, d, 45);
+                    if (m && m.date < date) {
+                        found = m.date;
+                        d = new Date(m.date.getTime() + 1000);
+                    } else {
+                        break;
+                    }
+                }
+                if (found) updateElement('last-full-moon', found);
             }
+        }
+
+        function getRelativeTime(targetDate) {
+            const now = new Date();
+            const diffMs = targetDate - now;
+            const diffSec = Math.floor(diffMs / 1000);
+            const absSec = Math.abs(diffSec);
+
+            const isFuture = diffSec > 0;
+            const prefix = isFuture ? 'in ' : '';
+            const suffix = isFuture ? '' : ' ago';
+
+            if (absSec < 60) return "now";
+            if (absSec < 3600) {
+                const mins = Math.floor(absSec / 60);
+                return `${prefix}${mins}m${suffix}`;
+            }
+            if (absSec < 86400) {
+                const hours = Math.floor(absSec / 3600);
+                const mins = Math.floor((absSec % 3600) / 60);
+                // e.g. "2h 30m ago"
+                return `${prefix}${hours}h ${mins}m${suffix}`;
+            }
+            // Days
+            const days = Math.floor(absSec / 86400);
+            const hours = Math.floor((absSec % 86400) / 3600);
+            return `${prefix}${days}d ${hours}h${suffix}`;
         }
 
         function getMoonPhaseName(degrees) {
