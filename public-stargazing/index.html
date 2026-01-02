@@ -492,6 +492,51 @@
             </div>
         </div>
 
+        <div id="weather-data" class="hidden data-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 style="margin:0; border-bottom:0; color:#38bdf8; font-size:1.1rem;">Observing Conditions</h2>
+                <span id="weather-status-badge"
+                    style="font-size:0.8rem; padding:2px 6px; border-radius:4px; background:#334155; color:#cbd5e1;">Loading...</span>
+            </div>
+
+            <div class="weather-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                <!-- Cloud Cover -->
+                <div class="weather-item"
+                    style="background:#1e293b; padding:0.8rem; border-radius:6px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                    <span style="font-size:1.2rem; margin-bottom:0.3rem;">☁️</span>
+                    <span style="font-size:0.8rem; color:#94a3b8;">Cloud Cover</span>
+                    <span id="weather-cloud" style="font-size:1rem; font-weight:bold; color:#f1f5f9;">--%</span>
+                </div>
+
+                <!-- Visibility -->
+                <div class="weather-item"
+                    style="background:#1e293b; padding:0.8rem; border-radius:6px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                    <span style="font-size:1.2rem; margin-bottom:0.3rem;">👁️</span>
+                    <span style="font-size:0.8rem; color:#94a3b8;">Visibility</span>
+                    <span id="weather-vis" style="font-size:1rem; font-weight:bold; color:#f1f5f9;">-- km</span>
+                </div>
+
+                <!-- Air Quality -->
+                <div class="weather-item"
+                    style="background:#1e293b; padding:0.8rem; border-radius:6px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                    <span style="font-size:1.2rem; margin-bottom:0.3rem;">🌫️</span>
+                    <span style="font-size:0.8rem; color:#94a3b8;">Air Quality (AQI)</span>
+                    <span id="weather-aqi" style="font-size:1rem; font-weight:bold; color:#f1f5f9;">--</span>
+                </div>
+
+                <!-- Humidity/Dew -->
+                <div class="weather-item"
+                    style="background:#1e293b; padding:0.8rem; border-radius:6px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                    <span style="font-size:1.2rem; margin-bottom:0.3rem;">💧</span>
+                    <span style="font-size:0.8rem; color:#94a3b8;">Humidity</span>
+                    <span id="weather-humidity" style="font-size:1rem; font-weight:bold; color:#f1f5f9;">--%</span>
+                </div>
+            </div>
+            <div style="margin-top:0.8rem; font-size:0.75rem; text-align:center; color:#64748b;">
+                Data provided by <a href="https://open-meteo.com/" target="_blank" style="color:#64748b;">Open-Meteo</a>
+            </div>
+        </div>
+
         <div id="planetary-data" class="hidden data-section">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                 <h2 style="margin:0; border-bottom:0; color:#38bdf8; font-size:1.1rem;">Planetary Positions</h2>
@@ -679,6 +724,7 @@
 
             updateVedicDetails(now, lat, lng);
             updatePlanetaryPositions(now);
+            fetchWeather(lat, lng);
             updateExternalLinks(lat, lng);
         }
 
@@ -771,6 +817,7 @@
         };
 
         // --- HELPER FUNCTIONS ---
+        // --- HELPER FUNCTIONS ---
         function getAyanamsa(t) {
             const year = t.date.getFullYear();
             return 24.1 + (year - 2000) * 0.014;
@@ -781,6 +828,247 @@
             while (d <= -180) d += 360;
             while (d > 180) d -= 360;
             return d;
+        }
+
+        function getCompassDir(az) {
+            const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+            const index = Math.round(az / 22.5) % 16;
+            return dirs[index];
+        }
+
+        async function fetchWeather(lat, lng) {
+            document.getElementById('weather-data').classList.remove('hidden');
+            try {
+                // Fetch Weather
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=cloud_cover,visibility,relative_humidity_2m`);
+                const wData = await wRes.json();
+
+                // Fetch AQI
+                const aRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=us_aqi`);
+                const aData = await aRes.json();
+
+                if (wData.current && aData.current) {
+                    const cloud = wData.current.cloud_cover;
+                    const visKm = wData.current.visibility / 1000;
+                    const humid = wData.current.relative_humidity_2m;
+                    const aqi = aData.current.us_aqi;
+
+                    document.getElementById('weather-cloud').innerText = `${cloud}%`;
+                    document.getElementById('weather-vis').innerText = `${visKm.toFixed(1)} km`;
+                    document.getElementById('weather-humidity').innerText = `${humid}%`;
+                    document.getElementById('weather-aqi').innerText = `${aqi}`;
+
+                    // Determine Status
+                    const badge = document.getElementById('weather-status-badge');
+                    if (cloud <= 20 && visKm > 8 && aqi < 100) {
+                        badge.innerText = "Excellent Observing";
+                        badge.style.background = "#15803d"; // Green
+                        badge.style.color = "#fff";
+                    } else if (cloud <= 50) {
+                        badge.innerText = "Fair Observing";
+                        badge.style.background = "#b45309"; // Yellow/Orange
+                        badge.style.color = "#fff";
+                    } else {
+                        badge.innerText = "Poor Conditions";
+                        badge.style.background = "#b91c1c"; // Red
+                        badge.style.color = "#fff";
+                    }
+                }
+            } catch (e) {
+                console.warn("Weather fetch failed", e);
+                document.getElementById('weather-status-badge').innerText = "Unavailable";
+            }
+        }
+
+        function updateSolarLunarCycles(now, lat, lng) {
+            const observer = new Astronomy.Observer(lat, lng, 0);
+
+            // --- SUN ---
+            const sunRise = Astronomy.SearchRise(Astronomy.Body.Sun, observer, +1, now, 1);
+            const sunSet = Astronomy.SearchSet(Astronomy.Body.Sun, observer, +1, now, 1);
+
+            // Logic: if current time is before today's sunset, show sunset.
+            // If after sunset, show tomorrow's sunrise.
+            // Actually, let's find the NEXT event.
+            // We have sunRise and sunSet which are the *next* occurrences from 'now'.
+            // Compare which one is sooner.
+
+            let nextSunEvent, nextSunLabel;
+
+            if (!sunRise || !sunSet) {
+                // Polar regions handling ideally, but simple fallback
+                nextSunEvent = null;
+            } else {
+                if (sunRise.date < sunSet.date) {
+                    nextSunLabel = "Sunrise";
+                    nextSunEvent = sunRise;
+                } else {
+                    nextSunLabel = "Sunset";
+                    nextSunEvent = sunSet;
+                }
+            }
+
+            if (nextSunEvent) {
+                document.getElementById('label-sun-cycle').innerText = nextSunLabel;
+                const hrs = nextSunEvent.date.getHours();
+                const mins = nextSunEvent.date.getMinutes().toString().padStart(2, '0');
+                const ampm = hrs >= 12 ? 'PM' : 'AM';
+                const formattedHrs = hrs % 12 || 12;
+
+                // Calculate Azimuth of the event
+                const horiz = Astronomy.HorizontalCoordinates(Astronomy.Body.Sun, observer, nextSunEvent.date);
+                const az = horiz.azimuth;
+                const dir = getCompassDir(az);
+
+                document.getElementById('sun-next-event-time').innerHTML =
+                    `${formattedHrs}:${mins} ${ampm} <span style="font-size:0.75rem; color:#94a3b8;">(${dir} ${az.toFixed(0)}°)</span>`;
+            }
+
+            // Calculations for Progress Bars (Day/Night) need 'previous' events too to know total duration.
+            // ... (Simplified for brevity, assuming standard approximate cycle for progress bar visual)
+            // Ideally: Find previous R/S and next R/S to get % progress.
+            // Let's keep existing simpler logic or improve it?
+            // Existing logic for progress bars is complex to do perfectly without multiple searches.
+            // We'll stick to basic relative position of Sun for progress.
+
+            // Sun Elevation for progress
+            const sunPos = Astronomy.HorizontalCoordinates(Astronomy.Body.Sun, observer, now);
+            let sunProgress = 0;
+            // Map altitude -90 to +90 to 0-100? No, cyclic.
+            // Better: If Day, 0% at rise, 50% at noon, 100% set.
+            // If Night, 0% set, 50% midnight, 100% rise.
+            // Approximate using altitude is okay for visual.
+            // Actually, let's use the actual events.
+            // We need Previous Event.
+            const prevSunRise = Astronomy.SearchRise(Astronomy.Body.Sun, observer, -1, now, 1);
+            const prevSunSet = Astronomy.SearchSet(Astronomy.Body.Sun, observer, -1, now, 1);
+
+            // Determine if Day or Night
+            // If prev event was Rise, it's Day. If prev event was Set, it's Night.
+            let isDay = false;
+            let rangeStr = "";
+            let progress = 0;
+
+            if (prevSunRise && prevSunSet) {
+                if (prevSunRise.date > prevSunSet.date) {
+                    // Rose after it set? No, strictly chronological:
+                    // T_prev_set < T_prev_rise < NOW ? -> Day
+                }
+                // Simpler: Compare most recent previous event
+                const lastEvent = (prevSunRise.date > prevSunSet.date) ? prevSunRise : prevSunSet;
+                isDay = (lastEvent === prevSunRise);
+
+                const nextEvent = isDay ? sunSet : sunRise;
+                if (lastEvent && nextEvent) {
+                    const total = nextEvent.date - lastEvent.date;
+                    const current = now - lastEvent.date;
+                    progress = (current / total) * 100;
+
+                    // Format Range
+                    const t1 = lastEvent.date.getHours() + ":" + lastEvent.date.getMinutes().toString().padStart(2, '0');
+                    const t2 = nextEvent.date.getHours() + ":" + nextEvent.date.getMinutes().toString().padStart(2, '0');
+                    rangeStr = `${t1} - ${t2}`;
+                }
+            }
+
+            document.getElementById('progress-sun').style.width = Math.min(100, Math.max(0, progress)) + "%";
+            document.getElementById('sun-cycle-range').innerText = rangeStr;
+
+
+            // --- MOON ---
+            const moonRise = Astronomy.SearchRise(Astronomy.Body.Moon, observer, +1, now, 1);
+            const moonSet = Astronomy.SearchSet(Astronomy.Body.Moon, observer, +1, now, 1);
+
+            let nextMoonEvent, nextMoonLabel;
+            if (moonRise && moonSet) {
+                if (moonRise.date < moonSet.date) {
+                    nextMoonLabel = "Moonrise";
+                    nextMoonEvent = moonRise;
+                } else {
+                    nextMoonLabel = "Moonset";
+                    nextMoonEvent = moonSet;
+                }
+            } else if (moonRise) { nextMoonLabel = "Moonrise"; nextMoonEvent = moonRise; }
+            else if (moonSet) { nextMoonLabel = "Moonset"; nextMoonEvent = moonSet; }
+
+            if (nextMoonEvent) {
+                document.getElementById('label-moon-cycle').innerText = nextMoonLabel;
+                const hrs = nextMoonEvent.date.getHours();
+                const mins = nextMoonEvent.date.getMinutes().toString().padStart(2, '0');
+                const formattedHrs = hrs % 12 || 12;
+                const ampm = hrs >= 12 ? 'PM' : 'AM'; // Fixed bug here: logic was inverted previously or simple?
+
+                // Azimuth for Moon too? User asked "Near sunrise/sunset also add...". Does custom mean sun? 
+                // "The direction where it will rise or set from". Implicitly "it" refers to the subject?
+                // Let's add it for Moon too, why not.
+                const horiz = Astronomy.HorizontalCoordinates(Astronomy.Body.Moon, observer, nextMoonEvent.date);
+                const az = horiz.azimuth;
+                const dir = getCompassDir(az);
+
+                document.getElementById('moon-next-event-time').innerHTML =
+                    `${formattedHrs}:${mins} ${ampm} <span style="font-size:0.75rem; color:#94a3b8;">(${dir} ${az.toFixed(0)}°)</span>`;
+            }
+
+            // Moon Progress
+            // Same logic: find prev rise/set
+            const prevMoonRise = Astronomy.SearchRise(Astronomy.Body.Moon, observer, -1, now, 1);
+            const prevMoonSet = Astronomy.SearchSet(Astronomy.Body.Moon, observer, -1, now, 1);
+
+            let moonRangeStr = "";
+            let moonProgress = 0;
+
+            if (prevMoonRise && prevMoonSet) {
+                const lastMEvent = (prevMoonRise.date > prevMoonSet.date) ? prevMoonRise : prevMoonSet;
+                const isMoonUp = (lastMEvent === prevMoonRise);
+
+                const nextMEvent = isMoonUp ? moonSet : moonRise;
+
+                if (lastMEvent && nextMEvent) {
+                    const total = nextMEvent.date - lastMEvent.date;
+                    const current = now - lastMEvent.date;
+                    moonProgress = (current / total) * 100;
+
+                    const t1 = lastMEvent.date.getHours() + ":" + lastMEvent.date.getMinutes().toString().padStart(2, '0');
+                    const t2 = nextMEvent.date.getHours() + ":" + nextMEvent.date.getMinutes().toString().padStart(2, '0');
+                    moonRangeStr = `${t1} - ${t2}`;
+                }
+            }
+
+            document.getElementById('progress-moon').style.width = Math.min(100, Math.max(0, moonProgress)) + "%";
+            document.getElementById('moon-cycle-range').innerText = moonRangeStr;
+
+
+            // --- MOON PHASE ---
+            const phase = Astronomy.MoonPhase(now); // 0..360
+            const illumination = Astronomy.Illumination(Astronomy.Body.Moon, now).phase_fraction * 100;
+
+            // Name
+            // 0=New, 90=First Quarter, 180=Full, 270=Third Quarter
+            // Approximation for text
+            let pName = "";
+            let pIcon = "";
+            if (phase < 15 || phase > 345) { pName = "New Moon"; pIcon = "🌑"; }
+            else if (phase < 75) { pName = "Waxing Crescent"; pIcon = "🌒"; }
+            else if (phase < 105) { pName = "First Quarter"; pIcon = "🌓"; }
+            else if (phase < 165) { pName = "Waxing Gibbous"; pIcon = "🌔"; }
+            else if (phase < 195) { pName = "Full Moon"; pIcon = "🌕"; }
+            else if (phase < 255) { pName = "Waning Gibbous"; pIcon = "🌖"; }
+            else if (phase < 285) { pName = "Last Quarter"; pIcon = "🌗"; }
+            else { pName = "Waning Crescent"; pIcon = "🌘"; }
+
+            document.getElementById('moon-phase-name').innerText = `${pIcon} ${pName} (${illumination.toFixed(0)}%)`;
+
+            // Progress: From New Moon (0) to New Moon (360) is one cycle.
+            // Or maybe progress to *Next* major phase? 
+            // Let's just show progress of lunation 0-100% (0=New, 50=Full, 100=New).
+            const lunationProgress = (phase / 360) * 100;
+            document.getElementById('progress-phase').style.width = lunationProgress + "%";
+
+            // Next Phase Event calculation is complex (SearchMoonPhase). 
+            // Let's just show the current Age or similar, or range of current phase?
+            // "Range" usually implies light. Visual bar is enough.
+            document.getElementById('moon-phase-range').innerText = `Age: ${(phase / 12.2).toFixed(1)}d`;
+
         }
 
         function updatePlanetaryPositions(date) {
