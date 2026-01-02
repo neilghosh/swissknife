@@ -59,6 +59,21 @@
           "destination": "/index.html"
         }
       ]
+    },
+    {
+      "public": "public-stargazing",
+      "site": "stargazing",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
   ]
 }
