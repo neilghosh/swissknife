@@ -178,6 +178,141 @@
             padding-bottom: 0.5rem;
             border-bottom: 1px dashed #334155;
         }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, minmax(110px, auto));
+            /* Taller rows */
+            gap: 2px;
+            background: #334155;
+            /* Border color */
+            margin-top: 1rem;
+            border: 2px solid #334155;
+            font-size: 0.85rem;
+        }
+
+        .chart-cell {
+            background: #1e293b;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-cell-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .chart-planets {
+            display: flex;
+            flex-direction: column;
+            /* Stack planets vertically */
+            gap: 2px;
+            align-content: center;
+        }
+
+        .planet-icon {
+            font-size: 1rem;
+            /* Larger icon */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        /* Center hole */
+        .chart-center {
+            grid-column: 2 / span 2;
+            grid-row: 2 / span 2;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: #64748b;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        /* Specific positions for South Indian Chart (Pisces top-left, clockwise) */
+        /*
+        12 1 2 3
+        11     4
+        10     5
+        9  8 7 6
+        Note: Indices 0..11 where 0=Aries. 
+        Pisces=11, Aries=0, Taurus=1, Gemini=2
+        */
+        .sign-11 {
+            grid-area: 1 / 1 / 2 / 2;
+        }
+
+        /* Pisces */
+        .sign-0 {
+            grid-area: 1 / 2 / 2 / 3;
+        }
+
+        /* Aries */
+        .sign-1 {
+            grid-area: 1 / 3 / 2 / 4;
+        }
+
+        /* Taurus */
+        .sign-2 {
+            grid-area: 1 / 4 / 2 / 5;
+        }
+
+        /* Gemini */
+
+        .sign-3 {
+            grid-area: 2 / 4 / 3 / 5;
+        }
+
+        /* Cancer */
+        .sign-4 {
+            grid-area: 3 / 4 / 4 / 5;
+        }
+
+        /* Leo */
+
+        .sign-5 {
+            grid-area: 4 / 4 / 5 / 5;
+        }
+
+        /* Virgo */
+        .sign-6 {
+            grid-area: 4 / 3 / 5 / 4;
+        }
+
+        /* Libra */
+        .sign-7 {
+            grid-area: 4 / 2 / 5 / 3;
+        }
+
+        /* Scorpio */
+        .sign-8 {
+            grid-area: 4 / 1 / 5 / 2;
+        }
+
+        /* Sagittarius */
+
+        .sign-9 {
+            grid-area: 3 / 1 / 4 / 2;
+        }
+
+        /* Capricorn */
+        .sign-10 {
+            grid-area: 2 / 1 / 3 / 2;
+        }
+
+        /* Aquarius */
     </style>
 </head>
 
@@ -355,6 +490,13 @@
                     <span id="vedic-prahara-end" class="bedic-time-range"></span>
                 </div>
             </div>
+        </div>
+
+        <div id="planetary-data" class="hidden data-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 style="margin:0; border-bottom:0; color:#38bdf8; font-size:1.1rem;">Planetary Positions</h2>
+            </div>
+            <div id="planet-list"></div>
         </div>
 
         <div id="error-msg" class="hidden"></div>
@@ -536,6 +678,7 @@
             }
 
             updateVedicDetails(now, lat, lng);
+            updatePlanetaryPositions(now);
             updateExternalLinks(lat, lng);
         }
 
@@ -627,6 +770,157 @@
             }
         };
 
+        // --- HELPER FUNCTIONS ---
+        function getAyanamsa(t) {
+            const year = t.date.getFullYear();
+            return 24.1 + (year - 2000) * 0.014;
+        }
+
+        function getAngleDiff(a, b) {
+            let d = a - b;
+            while (d <= -180) d += 360;
+            while (d > 180) d -= 360;
+            return d;
+        }
+
+        function updatePlanetaryPositions(date) {
+            document.getElementById('planetary-data').classList.remove('hidden');
+            const data = VEDIC_TRANSLATIONS[currentLang] || VEDIC_TRANSLATIONS['en'];
+            const container = document.getElementById('planet-list');
+            container.innerHTML = '';
+
+            const time = Astronomy.MakeTime(date);
+            const prevTime = time.AddDays(-1 / 24); // 1 hour back
+            const ayanamsa = getAyanamsa(time);
+
+            // Western Sign Names (Fixed)
+            const westernSigns = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+
+            // 1. Calculate positions and group by Sign
+            // Map 0..11 -> Array of planets
+            const planetsInSign = {};
+            for (let i = 0; i < 12; i++) planetsInSign[i] = [];
+
+            const bodies = [
+                { name: 'Sun', key: Astronomy.Body.Sun, icon: '☀️' },
+                { name: 'Moon', key: Astronomy.Body.Moon, icon: '🌙' },
+                { name: 'Mercury', key: Astronomy.Body.Mercury, icon: '☿️' },
+                { name: 'Venus', key: Astronomy.Body.Venus, icon: '♀️' },
+                { name: 'Mars', key: Astronomy.Body.Mars, icon: '♂️' },
+                { name: 'Jupiter', key: Astronomy.Body.Jupiter, icon: '♃' },
+                { name: 'Saturn', key: Astronomy.Body.Saturn, icon: '♄' },
+                { name: 'Uranus', key: Astronomy.Body.Uranus, icon: '♅' },
+                { name: 'Neptune', key: Astronomy.Body.Neptune, icon: '♆' }
+            ];
+
+            bodies.forEach(body => {
+                let lon, prevLon;
+                try {
+                    let getLon = (t) => {
+                        if (body.key === Astronomy.Body.Sun) {
+                            try { return Astronomy.EclipticLongitude(body.key, t); }
+                            catch (e) { return Astronomy.SunPosition(t).elon; }
+                        }
+                        return Astronomy.EclipticLongitude(body.key, t);
+                    };
+                    lon = getLon(time);
+                    prevLon = getLon(prevTime);
+                } catch (e) { return; }
+
+                // Speed calculation for retrograde
+                let diff = lon - prevLon;
+                if (diff < -180) diff += 360;
+                if (diff > 180) diff -= 360;
+                const isRetrograde = diff < 0;
+
+                let siderealLon = lon - ayanamsa;
+                if (siderealLon < 0) siderealLon += 360;
+
+                const rashiIndex = Math.floor(siderealLon / 30) % 12;
+                const degreeInSign = siderealLon % 30;
+
+                // Get Nakshatra
+                const nakDuration = 360 / 27;
+                const nakIndex = Math.floor(siderealLon / nakDuration);
+                const nakName = data.nakshatra[nakIndex] || "";
+
+                planetsInSign[rashiIndex].push({
+                    ...body,
+                    degree: degreeInSign,
+                    nakshatra: nakName,
+                    isRetrograde
+                });
+            });
+
+            // 2. Build Grid HTML
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'chart-grid';
+
+            // Center Text
+            const centerDiv = document.createElement('div');
+            centerDiv.className = 'chart-center';
+            centerDiv.innerHTML = "<div>Rashi Chart</div>";
+            gridDiv.appendChild(centerDiv);
+
+            // 12 Signs
+            for (let i = 0; i < 12; i++) {
+                const cell = document.createElement('div');
+                cell.className = `chart-cell sign-${i}`;
+
+                // Get Vedic Label
+                let rashiStr = data.rashi[i];
+                let rashiSymbol = rashiStr.split(' ')[0]; // ♈
+                let rashiName = rashiStr.split(' ').slice(1).join(' '); // Mesha
+
+                cell.innerHTML = `
+                    <div class="chart-cell-label" style="flex-direction:column; align-items:center; gap:2px; margin-bottom: 6px;">
+                        <span style="font-size:0.75rem; text-transform:uppercase; color:#fff; letter-spacing:0.5px;">${westernSigns[i]}</span>
+                        <span style="font-size:0.7rem; color:#94a3b8;">${rashiName} (${rashiSymbol})</span>
+                    </div>
+                    <div class="chart-planets" style="margin-top:2px;"></div>
+                `;
+
+                const pContainer = cell.querySelector('.chart-planets');
+
+                planetsInSign[i].forEach(p => {
+                    const pSpan = document.createElement('span');
+                    pSpan.className = 'planet-icon tooltip-container';
+
+                    // Display: Name + Icon
+                    // Highlight Retrograde visually? Maybe italic or specific color? kept simple as requested.
+                    const retroMark = p.isRetrograde ? '<span style="color:#f87171; font-size:0.7rem; margin-left:2px;">(R)</span>' : '';
+
+                    pSpan.innerHTML = `<span style="color:#38bdf8; font-weight:500;">${p.name}</span> <span style="font-size:1.1rem;">${p.icon}</span>${retroMark}`;
+                    pSpan.style.justifyContent = "space-between";
+                    pSpan.style.width = "100%";
+                    pSpan.style.padding = "2px 4px";
+                    pSpan.style.background = "#0f172a";
+                    pSpan.style.borderRadius = "4px";
+
+                    // Tooltip content
+                    let motionStr = p.isRetrograde ? "Retrograde ↺" : "Direct ↻";
+                    let tip = `Pos: ${p.degree.toFixed(2)}°\nNakshatra: ${p.nakshatra}\nMotion: ${motionStr}`;
+
+                    pSpan.setAttribute('data-tip', tip);
+                    pSpan.style.cursor = 'help';
+                    pContainer.appendChild(pSpan);
+                });
+
+                gridDiv.appendChild(cell);
+            }
+
+            container.appendChild(gridDiv);
+
+            // Add Legend/Note
+            const note = document.createElement('div');
+            note.style.fontSize = '0.75rem';
+            note.style.color = '#64748b';
+            note.style.marginTop = '0.5rem';
+            note.style.textAlign = 'center';
+            note.innerText = "Hover over planets for exact degrees and motion.";
+            container.appendChild(note);
+        }
+
         function updateVedicDetails(date, lat, lng) {
             document.getElementById('vedic-data').classList.remove('hidden');
             const data = VEDIC_TRANSLATIONS[currentLang] || VEDIC_TRANSLATIONS['en'];
@@ -677,18 +971,7 @@
                     return estimatedT.date;
                 }
 
-                function getAyanamsa(t) {
-                    const year = t.date.getFullYear();
-                    return 24.1 + (year - 2000) * 0.014;
-                }
 
-                function getAngleDiff(a, b) {
-                    // Returns minimal difference a - b in range [-180, 180]
-                    let d = a - b;
-                    while (d <= -180) d += 360;
-                    while (d > 180) d -= 360;
-                    return d;
-                }
 
                 // --- DATE HEADER ---
                 const currentYear = date.getFullYear();
