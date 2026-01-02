@@ -103,17 +103,80 @@
         .solar-event {
             display: flex;
             justify-content: space-between;
-            margin: 0.5rem 0;
-            font-size: 1.1rem;
+            align-items: flex-start;
+            /* Changed to align-start for multiline */
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e293b;
+            flex-wrap: wrap;
+            /* Allow wrapping */
+        }
+
+        .solar-value-container {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
         }
 
         .solar-label {
             color: #94a3b8;
+            font-size: 0.9rem;
         }
 
-        #error-msg {
-            color: #ef4444;
-            margin-top: 1rem;
+        .bedic-time-range {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Custom Tooltip */
+        .tooltip-container {
+            position: relative;
+            cursor: help;
+            border-bottom: 1px dotted #94a3b8;
+        }
+
+        .tooltip-container:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #334155;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 5px;
+        }
+
+        .vedic-progress-bg {
+            width: 100px;
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .vedic-progress-fill {
+            height: 100%;
+            background: #38bdf8;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .vedic-header-date {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed #334155;
         }
     </style>
 </head>
@@ -177,6 +240,119 @@
             </div>
         </div>
 
+        <div id="vedic-data" class="hidden data-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <h2 style="margin:0; border-bottom:0; color:#38bdf8; font-size:1.1rem;">Vedic Calendar</h2>
+                <select id="vedic-lang-select"
+                    style="background:#0f172a; color:#cbd5e1; border:1px solid #334155; border-radius:4px; padding:2px 5px; font-size:0.8rem;">
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी (Hindi)</option>
+                    <option value="bn">বাংলা (Bangla)</option>
+                    <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                    <option value="te">తెలుగు (Telugu)</option>
+                </select>
+            </div>
+
+            <div id="vedic-date-header" class="vedic-header-date">
+                <!-- Hindu Date will be injected here -->
+            </div>
+
+            <div class="solar-event">
+                <span id="label-tithi" class="solar-label tooltip-container" data-tip="Lunar Day (1/30th of Month)">📅
+                    Tithi</span>
+                <div class="solar-value-container">
+                    <span id="vedic-tithi">--</span>
+                    <div class="vedic-progress-bg" title="Progress to next Tithi">
+                        <div id="progress-tithi" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-tithi-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+            <div class="solar-event">
+                <span id="label-nakshatra" class="solar-label">✨ Nakshatra</span>
+                <div class="solar-value-container">
+                    <span id="vedic-nakshatra" class="tooltip-container" data-tip="Lunar Mansion">--</span>
+                    <div class="vedic-progress-bg" title="Progress to next Nakshatra">
+                        <div id="progress-nakshatra" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-nakshatra-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+
+            <div class="solar-event">
+                <span id="label-moon-rashi" class="solar-label tooltip-container"
+                    data-tip="Moon Sign (Chandra Rashi)">🌒 Chandra Rashi</span>
+                <div class="solar-value-container">
+                    <span id="vedic-moon-rashi">--</span>
+                    <div class="vedic-progress-bg" title="Progress of Moon through Sign">
+                        <div id="progress-moon-rashi" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-moon-rashi-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+
+            <div class="solar-event">
+                <span id="label-sun-rashi" class="solar-label tooltip-container" data-tip="Sun Sign (Surya Rashi)">☀️
+                    Surya Rashi</span>
+                <div class="solar-value-container">
+                    <span id="vedic-sun-rashi">--</span>
+                    <div class="vedic-progress-bg" title="Progress of Sun through Sign">
+                        <div id="progress-sun-rashi" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-sun-rashi-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+
+            <div class="solar-event">
+                <span id="label-masa" class="solar-label tooltip-container" data-tip="Lunar Month (Amanta)">🗓️
+                    Lunar Masa</span>
+                <div class="solar-value-container">
+                    <span id="vedic-masa">--</span>
+                    <!-- Progress of Month? Approx Tithi/30 -->
+                    <div class="vedic-progress-bg" title="Progress of Lunar Month">
+                        <div id="progress-masa" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-masa-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+
+            <div class="solar-event">
+                <span id="label-vaara" class="solar-label tooltip-container"
+                    data-tip="Day of the Week (Sunrise-based)">📆 Vaara</span>
+                <div class="solar-value-container">
+                    <span id="vedic-vaara">--</span>
+                    <!-- Progress of Day 24h -->
+                    <div class="vedic-progress-bg" title="Progress of Solar Day (Sunrise to Sunrise)">
+                        <div id="progress-vaara" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-vaara-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+            <div class="solar-event">
+                <span id="label-paksha" class="solar-label tooltip-container"
+                    data-tip="Lunar Fortnight (Waxing/Waning)">🌗 Paksha</span>
+                <div class="solar-value-container">
+                    <span id="vedic-paksha">--</span>
+                    <div class="vedic-progress-bg" title="Progress of Paksha (15 Tithis)">
+                        <div id="progress-paksha" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-paksha-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+
+            <div class="solar-event">
+                <span id="label-prahara" class="solar-label tooltip-container"
+                    data-tip="3-hour time division of Day/Night">⏳ Prahara</span>
+                <div class="solar-value-container">
+                    <span id="vedic-prahara">--</span>
+                    <div class="vedic-progress-bg" title="Progress of Prahara">
+                        <div id="progress-prahara" class="vedic-progress-fill" style="width:0%"></div>
+                    </div>
+                    <span id="vedic-prahara-end" class="bedic-time-range"></span>
+                </div>
+            </div>
+        </div>
+
         <div id="error-msg" class="hidden"></div>
 
         <div class="external-links"
@@ -217,7 +393,7 @@
                 const day = pad(isUTC ? date.getUTCDate() : date.getDate());
 
                 const hours = pad(isUTC ? date.getUTCHours() : date.getHours());
-                const minutes = pad(isUTC ? date.getUTCMinutes() : date.getMinutes());
+                const minutes = pad(isUTC ? date.getUTCMinutes() : date.getUTCSeconds());
                 const seconds = pad(isUTC ? date.getUTCSeconds() : date.getSeconds());
 
                 return `${dayName}, ${day} ${monthName} ${year} ${hours}:${minutes}:${seconds}`;
@@ -249,6 +425,25 @@
         const loadingState = document.getElementById('loading-state');
         const dataState = document.getElementById('data-state');
         const errorMsg = document.getElementById('error-msg');
+
+        let currentLang = localStorage.getItem('vedic-lang') || 'en';
+        document.getElementById('vedic-lang-select').value = currentLang;
+
+        document.getElementById('vedic-lang-select').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('vedic-lang', currentLang);
+
+            // Re-render if we have data
+            if (!dataState.classList.contains('hidden')) {
+                // We need the last used date/loc. 
+                // Since this is a simple app, we can just re-trigger with current "Now" and last known loc.
+                // Or better, let the update loop handle it? No, updateClock handles time, but vedic is static.
+                // We'll re-run updateVedicDetails with current "Now" and last known loc.
+                if (window.lastLat && window.lastLng) {
+                    updateVedicDetails(new Date(), window.lastLat, window.lastLng);
+                }
+            }
+        });
 
         // Auto-detect location on load
         window.addEventListener('load', () => {
@@ -311,6 +506,8 @@
         function success(position, isPrecise) {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
+            window.lastLat = lat;
+            window.lastLng = lng;
 
             document.getElementById('location-coords').innerText =
                 `${lat.toFixed(4)}, ${lng.toFixed(4)}` + (isPrecise ? " (GPS)" : " (IP)");
@@ -338,8 +535,426 @@
             initialState.classList.add('hidden');
             loadingState.classList.add('hidden');
             dataState.classList.remove('hidden');
-
+            updateVedicDetails(now, lat, lng);
             updateExternalLinks(lat, lng);
+        }
+
+        const NAKSHATRA_DATA = [
+            { name: "Ashwini", star: "Beta Arietis (Sheratan)", con: "Aries", mag: "2.64", dist: "59.6 ly" },
+            { name: "Bharani", star: "41 Arietis", con: "Aries", mag: "3.61", dist: "160 ly" },
+            { name: "Krittika", star: "Eta Tauri (Alcyone)", con: "Taurus", mag: "2.85", dist: "440 ly" },
+            { name: "Rohini", star: "Alpha Tauri (Aldebaran)", con: "Taurus", mag: "0.87", dist: "65 ly" },
+            { name: "Mrigashirsha", star: "Lambda Orionis (Meissa)", con: "Orion", mag: "3.39", dist: "1055 ly" },
+            { name: "Ardra", star: "Alpha Orionis (Betelgeuse)", con: "Orion", mag: "0.50 (var)", dist: "640 ly" },
+            { name: "Punarvasu", star: "Beta Geminorum (Pollux)", con: "Gemini", mag: "1.14", dist: "33.7 ly" },
+            { name: "Pushya", star: "Delta Cancri (Asellus Australis)", con: "Cancer", mag: "3.94", dist: "180 ly" },
+            { name: "Ashlesha", star: "Epsilon Hydrae", con: "Hydra", mag: "3.38", dist: "129 ly" },
+            { name: "Magha", star: "Alpha Leonis (Regulus)", con: "Leo", mag: "1.40", dist: "79 ly" },
+            { name: "Purva Phalguni", star: "Delta Leonis (Zosma)", con: "Leo", mag: "2.56", dist: "57.7 ly" },
+            { name: "Uttara Phalguni", star: "Beta Leonis (Denebola)", con: "Leo", mag: "2.11", dist: "35.9 ly" },
+            { name: "Hasta", star: "Delta Corvi (Algorab)", con: "Corvus", mag: "2.95", dist: "86.9 ly" },
+            { name: "Chitra", star: "Alpha Virginis (Spica)", con: "Virgo", mag: "0.98", dist: "250 ly" },
+            { name: "Swati", star: "Alpha Bootis (Arcturus)", con: "Bootes", mag: "-0.05", dist: "36.7 ly" },
+            { name: "Vishakha", star: "Alpha Librae (Zubenelgenubi)", con: "Libra", mag: "2.75", dist: "74.9 ly" },
+            { name: "Anuradha", star: "Delta Scorpii (Dschubba)", con: "Scorpius", mag: "2.32", dist: "490 ly" },
+            { name: "Jyeshtha", star: "Alpha Scorpii (Antares)", con: "Scorpius", mag: "1.06 (var)", dist: "550 ly" },
+            { name: "Mula", star: "Lambda Scorpii (Shaula)", con: "Scorpius", mag: "1.62", dist: "365 ly" },
+            { name: "Purva Ashadha", star: "Delta Sagittarii (Kaus Media)", con: "Sagittarius", mag: "2.70", dist: "348 ly" },
+            { name: "Uttara Ashadha", star: "Sigma Sagittarii (Nunki)", con: "Sagittarius", mag: "2.05", dist: "228 ly" },
+            { name: "Shravana", star: "Alpha Aquilae (Altair)", con: "Aquila", mag: "0.77", dist: "16.7 ly" },
+            { name: "Dhanishta", star: "Beta Delphini (Rotanev)", con: "Delphinus", mag: "3.63", dist: "100 ly" },
+            { name: "Shatabhisha", star: "Gamma Aquarii (Sadachbia)", con: "Aquarius", mag: "3.84", dist: "164 ly" },
+            { name: "Purva Bhadrapada", star: "Alpha Pegasi (Markab)", con: "Pegasus", mag: "2.48", dist: "133 ly" },
+            { name: "Uttara Bhadrapada", star: "Gamma Pegasi (Algenib)", con: "Pegasus", mag: "2.84", dist: "390 ly" },
+            { name: "Revati", star: "Zeta Piscium", con: "Pisces", mag: "5.2", dist: "148 ly" }
+        ];
+
+        const VEDIC_TRANSLATIONS = {
+            en: {
+                labels: { tithi: "📅 Tithi", masa: "🗓️ Lunar Month", rashi: "☀️ Surya Rashi", moonRashi: "🌒 Chandra Rashi", vaara: "📆 Vaara", paksha: "🌗 Paksha", nakshatra: "✨ Nakshatra", prahara: "⏳ Prahara" },
+                tithi: ["Prathama", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima", "Amavasya"],
+                paksha: ["Shukla (Waxing)", "Krishna (Waning)"],
+                nakshatra: ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashirsha", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"],
+                rashi: ["♈ Mesha", "♉ Vrishabha", "♊ Mithuna", "♋ Karka", "♌ Simha", "♍ Kanya", "♎ Tula", "♏ Vrishchika", "♐ Dhanu", "♑ Makara", "♒ Kumbha", "♓ Meena"],
+                masaName: ["Baishakha", "Jyeshtha", "Ashadha", "Shravana", "Bhadrapada", "Ashwina", "Kartika", "Margashirsha", "Pausha", "Magha", "Phalguna", "Chaitra"],
+                vaara: ["Ravivara (Sun)", "Somavara (Mon)", "Mangalavara (Tue)", "Budhavara (Wed)", "Guruvara (Thu)", "Shukravara (Fri)", "Shanivara (Sat)"],
+                prahara: ["Day Prahara", "Night Prahara"],
+                eras: { vikram: "Vikram Samvat", shaka: "Shaka Samvat", bangla: "Bangabda" }
+            },
+            hi: {
+                labels: { tithi: "📅 तिथि", masa: "🗓️ चंद्र मास", rashi: "☀️ सूर्य राशि", moonRashi: "🌒 चंद्र राशि", vaara: "📆 वार", paksha: "🌗 पक्ष", nakshatra: "✨ नक्षत्र", prahara: "⏳ प्रहर" },
+                tithi: ["प्रथमा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा", "अमावस्या"],
+                paksha: ["शुक्ल पक्ष", "कृष्ण पक्ष"],
+                nakshatra: ["अश्विनी", "भरणी", "कृत्तिका", "रोहिणी", "मृगशीर्ष", "आर्द्रा", "पुनर्वसु", "पुष्य", "अश्लेषा", "मघा", "पूर्वा फाल्गुनी", "उत्तरा फाल्गुनी", "हस्त", "चित्रा", "स्वाती", "विशाखा", "अनुराधा", "ज्येष्ठा", "मूल", "पूर्वाषाढ़ा", "उत्तराषाढ़ा", "श्रवण", "धनिष्ठा", "शतभिषा", "पूर्वा भाद्रपद", "उत्तरा भाद्रपद", "रेवती"],
+                rashi: ["♈ मेष", "♉ वृषभ", "♊ मिथुन", "♋ कर्क", "♌ सिंह", "♍ कन्या", "♎ तुला", "♏ वृश्चिक", "♐ धनु", "♑ मकर", "♒ कुंभ", "♓ मीन"],
+                masaName: ["वैशाख", "ज्येष्ठ", "आषाढ़", "श्रावण", "भाद्रपद", "आश्विन", "कार्तिक", "मार्गशीर्ष", "पौष", "माघ", "फाल्गुन", "चैत्र"],
+                vaara: ["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"],
+                prahara: ["दिन प्रहर", "रात्रि प्रहर"],
+                eras: { vikram: "विक्रम संवत", shaka: "शक संवत", bangla: "बंगाब्द" }
+            },
+            bn: {
+                labels: { tithi: "📅 তিথি", masa: "🗓️ মাস (চন্দ্র)", rashi: "☀️ সূর্য রাশি", moonRashi: "🌒 চন্দ্র রাশি", vaara: "📆 বার", paksha: "🌗 পক্ষ", nakshatra: "✨ নক্ষত্র", prahara: "⏳ প্রহর" },
+                tithi: ["প্রথমা", "ধৃতীয়া", "তৃ্তীয়া", "চতুর্থী", "পঞ্চমী", "ষষ্ঠী", "সপ্তমী", "অষ্টমী", "নবমী", "দশমী", "একাদশী", "দ্বাদশী", "ত্রয়োদশী", "চতুর্দশী", "পূর্ণিমা", "অমাবস্যা"],
+                paksha: ["শুক্লপক্ষ", "কৃষ্ণপক্ষ"],
+                nakshatra: ["অশ্বিনী", "ভরণী", "কৃত্তিকা", "রোহিণী", "মৃগশিরা", "আর্দ্রা", "পুনর্বসু", "পুষ্যা", "অশ্লেষা", "মঘা", "পূর্ব ফাল্গুনী", "উত্তর ফাল্গুনী", "হস্ত", "চিত্রা", "স্বাতী", "বিশাখা", "অনুরাধা", "জ্যেষ্ঠা", "মূলা", "পূর্বাষাঢ়া", "উত্তরাষাঢ়া", "শ্রবণা", "ধনিষ্ঠা", "শতভিষা", "পূর্ব ভাদ্রপদ", "উত্তর ভাদ্রপদ", "রেবতী"],
+                rashi: ["♈ মেষ", "♉ বৃষ", "♊ মিথুন", "♋ কর্কট", "♌ সিংহ", "♍ কন্যা", "♎ তুলা", "♏ বৃশ্চিক", "♐ ধনু", "♑ মকর", "♒ কুম্ভ", "♓ মীন"],
+                masaName: ["বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌুষ", "মাঘ", "ফাল্গুন", "চৈত্র"],
+                vaara: ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"],
+                prahara: ["দিন প্রহর", "রাত্রি প্রহর"],
+                eras: { vikram: "বিক্রম সংবৎ", shaka: "শক সংবৎ", bangla: "বঙ্গাব্দ" }
+            },
+            or: {
+                labels: { tithi: "📅 ତିଥି", masa: "🗓️ ମାସ (ଚନ୍ଦ୍ର)", rashi: "☀️ ସୂର୍ଯ୍ୟ ରାଶି", moonRashi: "🌒 ଚନ୍ଦ୍ର ରାଶି", vaara: "📆 ବାର", paksha: "🌗 ପକ୍ଷ", nakshatra: "✨ ନକ୍ଷତ୍ର", prahara: "⏳ ପ୍ରହର" },
+                tithi: ["ପ୍ରଥମା", "ଦ୍ୱିତୀୟା", "ତୃତୀୟା", "ଚତୁର୍ଥୀ", "ପଞ୍ଚମୀ", "ଷଷ୍ଠୀ", "ସପ୍ତମୀ", "ଅଷ୍ଟମୀ", "ନବମୀ", "ଦଶମୀ", "ଏକାଦଶୀ", "ଦ୍ୱାଦଶୀ", "ତ୍ରୟୋଦଶୀ", "ଚତୁର୍ଦଶୀ", "ପୂର୍ଣ୍ଣିମା", "ଅମାବାସ୍ୟା"],
+                paksha: ["ଶୁକ୍ଳ ପକ୍ଷ", "କୃଷ୍ଣ ପକ୍ଷ"],
+                nakshatra: ["ଅଶ୍ୱିନୀ", "ଦ୍ୱିଜା (ଭରଣୀ)", "କୃତ୍ତିକା", "ରୋହିଣୀ", "ମୃଗଶିରା", "ଆର୍ଦ୍ରା", "ପୁନର୍ବସୁ", "ପୁଷ୍ୟା", "ଅଶ୍ଳେଷା", "ମଘା", "ପୂର୍ବା ଫାଲ୍ଗୁନୀ", "ଉତ୍ତରା ଫାଲ୍ଗୁନୀ", "ହସ୍ତା", "ଚିତ୍ରା", "ସ୍ୱାତୀ", "ବିଶାଖା", "ଅନୁରାଧ", "ଜ୍ୟେଷ୍ଠା", "ମୂଳା", "ପୂର୍ବାଷାଢ଼ା", "ଉତ୍ତରାଷାଢ଼ା", "ଶ୍ରବଣା", "ଧନିଷ୍ଠା", "ଶତଭିଷା", "ପୂର୍ବ ଭାଦ୍ରପଦ", "ଉତ୍ତର ଭାଦ୍ରପଦ", "ରେବତୀ"],
+                rashi: ["♈ ମେଷ", "♉ ବୃଷ", "♊ ମିଥୁନ", "♋ କର୍କଟ", "♌ ସିଂହ", "♍ କନ୍ୟା", "♎ ତୁଳା", "♏ ବିଛା", "♐ ଧନୁ", "♑ ମକର", "♒ କୁମ୍ଭ", "♓ ମୀନ"],
+                masaName: ["ବୈଶାଖ", "ଜ୍ୟେଷ୍ଠ", "ଆଷାଢ଼", "ଶ୍ରାବଣ", "ଭାଦ୍ରବ", "ଆଶ୍ୱିନ", "କାର୍ତ୍ତିକ", "ମାର୍ଗଶୀର୍ଷ", "ପୌଷ", "ମାଘ", "ଫାଲ୍ଗୁନ", "ଚୈତ୍ର"],
+                vaara: ["ରବିବାର", "ସୋମବାର", "ମଙ୍ଗଳବାର", "ବୁଧବାର", "ଗୁରୁବାର", "ଶୁକ୍ରବାର", "ଶନିବାର"],
+                prahara: ["ଦିନ ପ୍ରହର", "ରାତି ପ୍ରହର"],
+                eras: { vikram: "ବିକ୍ରମ ସମ୍ବତ", shaka: "ଶକ ସମ୍ବତ", bangla: "ବଙ୍ଗାବ୍ଦ" }
+            },
+            te: {
+                labels: { tithi: "📅 తిథి", masa: "🗓️ చంద్ర మాసం", rashi: "☀️ సూర్య రాశి", moonRashi: "🌒 చంద్ర రాశి", vaara: "📆 వారం", paksha: "🌗 పక్షం", nakshatra: "✨ నక్షత్రం", prahara: "⏳ ప్రహరం" },
+                tithi: ["పాడ్యమి", "విదియ", "తదియ", "చవితి", "పంచమి", "షష్ఠి", "సప్తమి", "అష్టమి", "నవమి", "దశమి", "ఏకాదశి", "ద్వాదశి", "త్రయోదశి", "చతుర్దశి", "పౌర్ణమి", "అమావాస్య"],
+                paksha: ["శుక్ల పక్షం", "కృష్ణ పక్షం"],
+                nakshatra: ["అశ్విని", "భరణి", "కృత్తిక", "రోహిణి", "మృగశిర", "ఆర్ద్ర", "పునర్వసు", "పుష్య", "ఆశ్రేష", "మఖ", "పూర్వ ఫల్గుణి", "ఉత్తర ఫల్గుణి", "హస్త", "చిత్త", "స్వాతి", "విశాఖ", "అనూరాధ", "jyēṣṭha", "మూల", "పూర్వాషాఢ", "ఉత్తరాషాఢ", "శ్రవణం", "ధనిష్ఠ", "శతభిషం", "పూర్వాభాద్ర", "ఉత్తరాభాద్ర", "రేవతి"],
+                rashi: ["♈ మేషం", "♉ వృషభం", "♊ మిథునం", "♋ కర్కాటకం", "♌ సింహం", "♍ కన్యా", "♎ తులా", "♏ వృశ్చికం", "♐ ధనుస్సు", "♑ మకరం", "♒ కుంభం", "♓ మీనం"],
+                masaName: ["వైశాఖం", "జ్యేష్ఠం", "ఆషాఢం", "శ్రావణం", "భాద్రపదం", "ఆశ్వయుజం", "కార్తీకం", "మార్గశిరం", "పుష్యం", "మాఘం", "ఫాల్గుణం", "చైత్రం"],
+                vaara: ["ఆదివారం", "సోమవారం", "మంగళవారం", "బుధవారం", "గురువారం", "శుక్రవారం", "శనివారం"],
+                prahara: ["పగలు ప్రహర", "రాత్రి ప్రహర"],
+                eras: { vikram: "విక్రమ్ సంవత్", shaka: "శక సంవత్", bangla: "బంగాబ్దం" }
+            }
+        };
+
+        function updateVedicDetails(date, lat, lng) {
+            document.getElementById('vedic-data').classList.remove('hidden');
+            const data = VEDIC_TRANSLATIONS[currentLang] || VEDIC_TRANSLATIONS['en'];
+
+            // Update labels
+            if (data.labels) {
+                document.getElementById('label-tithi').innerText = data.labels.tithi;
+                document.getElementById('label-masa').innerText = data.labels.masa;
+                document.getElementById('label-sun-rashi').innerText = data.labels.rashi;
+                document.getElementById('label-moon-rashi').innerText = data.labels.moonRashi;
+                document.getElementById('label-vaara').innerText = data.labels.vaara;
+                document.getElementById('label-paksha').innerText = data.labels.paksha;
+                document.getElementById('label-nakshatra').innerText = data.labels.nakshatra;
+                document.getElementById('label-prahara').innerText = data.labels.prahara;
+            }
+
+            try {
+                // 0. Prepare AstroTime
+                const time = Astronomy.MakeTime(date);
+
+                // --- HELPER FOR FINDING END TIME ---
+                function formatTime(dateObj, forceDate = true) {
+                    // Always show date if forceDate is true, or if not today.
+                    // User requested "Every range should have a date time".
+                    const today = date.toDateString() === dateObj.toDateString();
+                    const hrs = dateObj.getHours().toString().padStart(2, '0');
+                    const mins = dateObj.getMinutes().toString().padStart(2, '0');
+                    const dayStr = (forceDate || !today) ? `${dateObj.getDate()}/${dateObj.getMonth() + 1} ` : "";
+                    return `${dayStr}${hrs}:${mins}`;
+                }
+
+                function findNextCrossing(startT, callbackTargetValue, approxDays) {
+                    // Uses Astronomy.Search to find when callback returns 0.
+                    const tLimit = startT.AddDays(approxDays);
+                    const event = Astronomy.Search(callbackTargetValue, startT, tLimit);
+                    if (event) return event.date;
+                    return null;
+                }
+
+                function findPriorCrossing(startT, callbackTargetValue, approxDays) {
+                    const tLimit = startT.AddDays(-approxDays);
+                    // Search expects t1 < t2. tLimit is past, startT is present.
+                    // Search returns the event time.
+                    const event = Astronomy.Search(callbackTargetValue, tLimit, startT);
+                    if (event) return event.date;
+                    return null;
+                }
+
+                function getAyanamsa(t) {
+                    const year = t.date.getFullYear();
+                    return 24.1 + (year - 2000) * 0.014;
+                }
+
+                function getAngleDiff(a, b) {
+                    // Returns minimal difference a - b in range [-180, 180]
+                    let d = a - b;
+                    while (d <= -180) d += 360;
+                    while (d > 180) d -= 360;
+                    return d;
+                }
+
+                // --- DATE HEADER ---
+                const currentYear = date.getFullYear();
+                const shakaYear = currentYear - 78; // Approx
+                const vikramYear = currentYear + 57; // Approx
+                const banglaYear = currentYear - 593; // Approx
+
+                let dateHeaderStr = `${data.eras.vikram} ${vikramYear} | ${data.eras.shaka} ${shakaYear}`;
+                if (currentLang === 'bn') dateHeaderStr = `${data.eras.bangla} ${banglaYear} | ${data.eras.shaka} ${shakaYear}`;
+                if (currentLang === 'or') dateHeaderStr = `${data.eras.shaka} ${shakaYear} | ${data.eras.vikram} ${vikramYear}`;
+
+                document.getElementById('vedic-date-header').innerText = dateHeaderStr;
+
+                // 1. Tithi
+                let sunLon;
+                try { sunLon = Astronomy.EclipticLongitude(Astronomy.Body.Sun, time); }
+                catch (e) { sunLon = Astronomy.SunPosition(time).elon; }
+                const moonLon = Astronomy.EclipticLongitude(Astronomy.Body.Moon, time);
+
+                let diff = moonLon - sunLon;
+                if (diff < 0) diff += 360;
+
+                const tithiNum = Math.floor(diff / 12) + 1;
+                const isShukla = tithiNum <= 15;
+                const paksha = isShukla ? data.paksha[0] : data.paksha[1];
+
+                // Progress
+                // Tithi matches (diff/12). 12 deg spans. diff % 12 is amount into current tithi.
+                const tithiProgress = ((diff % 12) / 12) * 100;
+                document.getElementById('progress-tithi').style.width = `${tithiProgress}%`;
+
+                let tithiNameIndex = (tithiNum - 1) % 15;
+                let tithiName = data.tithi[tithiNameIndex];
+
+                let tithiIcon = isShukla ? "🌒" : "🌘";
+                if (tithiNum === 15) { tithiName = data.tithi[14]; tithiIcon = "🌕"; } // Purnima
+                else if (tithiNum === 30) { tithiName = data.tithi[15]; tithiIcon = "🌑"; } // Amavasya
+
+                document.getElementById('vedic-tithi').innerText = `${tithiIcon} ${tithiName}`;
+                document.getElementById('vedic-paksha').innerText = paksha;
+
+                // Paksha Progress (approx)
+                // Shukla: Tithi 1-15. Krishna: Tithi 16-30.
+                const pakshaProgress = ((tithiNum - 1 + (tithiProgress / 100)) % 15) / 15 * 100;
+                document.getElementById('progress-paksha').style.width = `${pakshaProgress}%`;
+
+                // Calc Tithi Start & End
+                const targetDiffStart = (tithiNum - 1) * 12.0;
+                const targetDiffEnd = tithiNum * 12.0;
+
+                const tithiCallback = (target) => (t) => {
+                    let s; try { s = Astronomy.EclipticLongitude(Astronomy.Body.Sun, t); } catch (e) { s = Astronomy.SunPosition(t).elon; }
+                    const m = Astronomy.EclipticLongitude(Astronomy.Body.Moon, t);
+                    let diff = m - s;
+                    if (diff < 0) diff += 360;
+                    return getAngleDiff(diff, target);
+                };
+
+                const tStart = findPriorCrossing(time, tithiCallback(targetDiffStart), 15);
+                const tEnd = findNextCrossing(time, tithiCallback(targetDiffEnd), 15);
+
+                let tRange = "--";
+                if (tStart && tEnd) tRange = `${formatTime(tStart)} - ${formatTime(tEnd)}`;
+                else if (tEnd) tRange = `Ends: ${formatTime(tEnd)}`;
+                else tRange = "Calc..."; // Debug indicator if fails
+                document.getElementById('vedic-tithi-end').innerText = tRange;
+
+                // Paksha Start/End
+                // Shukla (0-180deg). Krishna (180-360deg).
+                const pakshaStartDiff = isShukla ? 0 : 180;
+                const pakshaEndDiff = isShukla ? 180 : 0; // Fix: 360 wraps to 0 in diff
+
+                // Reuse tithiCallback (which is just sun-moon diff)
+                const pStart = findPriorCrossing(time, tithiCallback(pakshaStartDiff), 20);
+                const pEnd = findNextCrossing(time, tithiCallback(pakshaEndDiff), 20);
+
+                if (pStart && pEnd) document.getElementById('vedic-paksha-end').innerText = `${formatTime(pStart)} - ${formatTime(pEnd)}`;
+                else if (pEnd) document.getElementById('vedic-paksha-end').innerText = `Ends: ${formatTime(pEnd)}`;
+
+                // 2. Nakshatra
+                let siderealLon = moonLon - getAyanamsa(time);
+                if (siderealLon < 0) siderealLon += 360;
+
+                const nakshatraDuration = 360 / 27;
+                const nakshatraIndex = Math.floor(siderealLon / nakshatraDuration);
+
+                const nakProgress = ((siderealLon % nakshatraDuration) / nakshatraDuration) * 100;
+                document.getElementById('progress-nakshatra').style.width = `${nakProgress}%`;
+
+                // Detailed tooltips for Nakshatra on VALUE
+                const nData = NAKSHATRA_DATA[nakshatraIndex];
+                let nStr = `✨ ${data.nakshatra[nakshatraIndex] || "Unknown"}`;
+                if (nData) {
+                    nStr += ` (${nData.star})`;
+                    const nTip = `Star: ${nData.star}\nConstellation: ${nData.con}\nMag: ${nData.mag}, Dist: ${nData.dist}`;
+                    document.getElementById('vedic-nakshatra').setAttribute('data-tip', nTip);
+                }
+
+                document.getElementById('vedic-nakshatra').innerText = nStr;
+
+                // Nakshatra Ends
+                const nakStartLon = nakshatraIndex * nakshatraDuration;
+                const nakEndLon = (nakshatraIndex + 1) * nakshatraDuration;
+
+                const nakCallback = (target) => (t) => {
+                    const m = Astronomy.EclipticLongitude(Astronomy.Body.Moon, t);
+                    const ay = getAyanamsa(t);
+                    let sd = m - ay;
+                    if (sd < 0) sd += 360;
+                    return getAngleDiff(sd, target);
+                };
+
+                const nStart = findPriorCrossing(time, nakCallback(nakStartLon), 15);
+                const nEnd = findNextCrossing(time, nakCallback(nakEndLon), 15);
+
+                let nRange = "--";
+                if (nStart && nEnd) nRange = `${formatTime(nStart)} - ${formatTime(nEnd)}`;
+                else if (nEnd) nRange = `Ends: ${formatTime(nEnd)}`;
+                document.getElementById('vedic-nakshatra-end').innerText = nRange;
+
+                // 3. Rashi (Moon & Sun) and Masa
+                const moonRashiIndex = Math.floor(siderealLon / 30);
+                document.getElementById('vedic-moon-rashi').innerText = data.rashi[moonRashiIndex];
+
+                // Moon Rashi Progress
+                const moonRashiProgress = ((siderealLon % 30) / 30) * 100;
+                document.getElementById('progress-moon-rashi').style.width = `${moonRashiProgress}%`;
+
+                // Moon Rashi End
+                const rashiCallback = (target) => (t) => {
+                    const m = Astronomy.EclipticLongitude(Astronomy.Body.Moon, t);
+                    const ay = getAyanamsa(t);
+                    let sd = m - ay;
+                    if (sd < 0) sd += 360;
+                    return getAngleDiff(sd, target);
+                };
+                const mrStartLon = moonRashiIndex * 30;
+                const mrEndLon = (moonRashiIndex + 1) * 30;
+
+                const mrStart = findPriorCrossing(time, rashiCallback(mrStartLon), 15);
+                const mrEnd = findNextCrossing(time, rashiCallback(mrEndLon), 15);
+
+                let mrRange = "--";
+                if (mrStart && mrEnd) mrRange = `${formatTime(mrStart)} - ${formatTime(mrEnd)}`;
+                else if (mrEnd) mrRange = `Ends: ${formatTime(mrEnd)}`;
+                document.getElementById('vedic-moon-rashi-end').innerText = mrRange;
+
+                // Sun Rashi & Masa (Approx)
+                let sunSidereal = sunLon - getAyanamsa(time);
+                if (sunSidereal < 0) sunSidereal += 360;
+                const rashiIndex = Math.floor(sunSidereal / 30);
+
+                document.getElementById('vedic-sun-rashi').innerText = data.rashi[rashiIndex];
+                document.getElementById('vedic-masa').innerText = data.masaName[rashiIndex];
+
+                // Sun Rashi Progress
+                const sunRashiProgress = ((sunSidereal % 30) / 30) * 100;
+                document.getElementById('progress-sun-rashi').style.width = `${sunRashiProgress}%`;
+
+                // Masa Progress (Approx Sun progress in Rashi)
+                document.getElementById('progress-masa').style.width = `${sunRashiProgress}%`;
+
+                // Sun Rashi End (approx 30 days)
+                // Sun Rashi End (approx 30 days)
+                const srCallback = (target) => (t) => {
+                    let s; try { s = Astronomy.EclipticLongitude(Astronomy.Body.Sun, t); } catch (e) { s = Astronomy.SunPosition(t).elon; }
+                    const ay = getAyanamsa(t);
+                    let sd = s - ay;
+                    if (sd < 0) sd += 360;
+                    let val = sd - target;
+                    if (Math.abs(val) > 180) val = val > 0 ? val - 360 : val + 360;
+                    return val;
+                }
+                const sunStartLon = rashiIndex * 30;
+                const sunEndLon = (rashiIndex + 1) * 30;
+
+                const sStart = findPriorCrossing(time, srCallback(sunStartLon), 35);
+                const sEnd = findNextCrossing(time, srCallback(sunEndLon), 35);
+
+                if (sStart && sEnd) {
+                    // Use forceDate=true (default)
+                    const str = `${formatTime(sStart)} - ${formatTime(sEnd)}`;
+                    document.getElementById('vedic-sun-rashi-end').innerText = str;
+                    document.getElementById('vedic-masa-end').innerText = str;
+                } else if (sEnd) {
+                    const str = `Ends: ${formatTime(sEnd)}`;
+                    document.getElementById('vedic-sun-rashi-end').innerText = str;
+                    document.getElementById('vedic-masa-end').innerText = str;
+                }
+
+                // 4. Vaara
+                const obs = new Astronomy.Observer(lat, lng, 0);
+                const prevRise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, +1, time, -1);
+                let dayIndex = date.getDay();
+                if (prevRise) dayIndex = prevRise.date.getDay();
+                document.getElementById('vedic-vaara').innerText = data.vaara[dayIndex];
+
+                // Vaara End (Next Sunrise)
+                const nextSunrise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, +1, time, +1);
+                if (nextSunrise) {
+                    // Get Prev Sunrise for Start
+                    const sunStart = prevRise ? formatTime(prevRise.date) : "--";
+                    const sunEnd = formatTime(nextSunrise.date);
+                    document.getElementById('vedic-vaara-end').innerText = `${sunStart} - ${sunEnd}`;
+
+                    // Vaara Progress
+                    if (prevRise) {
+                        const dayTotal = nextSunrise.date - prevRise.date;
+                        const dayElapsed = date - prevRise.date;
+                        const vProg = (dayElapsed / dayTotal) * 100;
+                        document.getElementById('progress-vaara').style.width = `${vProg}%`;
+                    }
+                }
+
+                // 5. Prahara
+                const nextRise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, +1, time, +1);
+                const nextSet = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, -1, time, +1);
+
+                let praharaStr = "--";
+                let praharaEnd = "";
+
+                if (nextRise && nextSet) {
+                    if (nextSet.date < nextRise.date) {
+                        // Day Time
+                        const currentRise = prevRise || Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, +1, time, -1);
+                        if (currentRise) {
+                            const dayLen = nextSet.date - currentRise.date;
+                            const elapsed = date - currentRise.date;
+                            const p = Math.floor(elapsed / (dayLen / 4)) + 1;
+                            if (p <= 4) {
+                                praharaStr = `${data.prahara[0]} ${p}/4`;
+                                // Progress
+                                const praharaDuration = dayLen / 4;
+                                const praharaElapsed = elapsed - ((p - 1) * praharaDuration);
+                                const pProg = (praharaElapsed / praharaDuration) * 100;
+                                document.getElementById('progress-prahara').style.width = `${pProg}%`;
+                            }
+                            // Prahara End Time
+                            const endP = new Date(currentRise.date.getTime() + (p * dayLen / 4));
+                            const startP = new Date(currentRise.date.getTime() + ((p - 1) * dayLen / 4));
+                            praharaEnd = `${formatTime(startP)} - ${formatTime(endP)}`;
+                        }
+                    } else {
+                        // Night Time
+                        const prevSet = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, -1, time, -1);
+                        if (prevSet) {
+                            const nightLen = nextRise.date - prevSet.date;
+                            const elapsed = date - prevSet.date;
+                            const p = Math.floor(elapsed / (nightLen / 4)) + 1;
+                            if (p <= 4) {
+                                praharaStr = `${data.prahara[1]} ${p}/4`;
+                                const praharaDuration = nightLen / 4;
+                                const praharaElapsed = elapsed - ((p - 1) * praharaDuration);
+                                const pProg = (praharaElapsed / praharaDuration) * 100;
+                                document.getElementById('progress-prahara').style.width = `${pProg}%`;
+                            }
+                            const endP = new Date(prevSet.date.getTime() + (p * nightLen / 4));
+                            const startP = new Date(prevSet.date.getTime() + ((p - 1) * nightLen / 4));
+                            praharaEnd = `${formatTime(startP)} - ${formatTime(endP)}`;
+                        }
+                    }
+                }
+                document.getElementById('vedic-prahara').innerText = praharaStr;
+                document.getElementById('vedic-prahara-end').innerText = praharaEnd;
+            } catch (e) {
+                console.error("Vedic calc error:", e);
+                // document.getElementById('vedic-prahara').innerText = "Calc Error";
+            }
         }
 
         function updateExternalLinks(lat, lng) {
