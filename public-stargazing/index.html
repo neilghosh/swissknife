@@ -658,21 +658,23 @@
                     return `${dayStr}${hrs}:${mins}`;
                 }
 
-                function findNextCrossing(startT, callbackTargetValue, approxDays) {
-                    // Uses Astronomy.Search to find when callback returns 0.
-                    const tLimit = startT.AddDays(approxDays);
-                    const event = Astronomy.Search(callbackTargetValue, startT, tLimit);
-                    if (event) return event.date;
-                    return null;
-                }
+                function findCrossingEfficient(startT, currentVal, targetVal, ratePerDay, callback) {
+                    // Estimate delta time: rate is degrees/day.
+                    // deltaAngle = current - target. (If +ve, we passed it, need to go back).
+                    // t_event ~= startT - (deltaAngle / ratePerDay)
+                    const deltaAngle = getAngleDiff(currentVal, targetVal);
+                    const daysOffset = deltaAngle / ratePerDay;
+                    const estimatedT = startT.AddDays(-daysOffset);
 
-                function findPriorCrossing(startT, callbackTargetValue, approxDays) {
-                    const tLimit = startT.AddDays(-approxDays);
-                    // Search expects t1 < t2. tLimit is past, startT is present.
-                    // Search returns the event time.
-                    const event = Astronomy.Search(callbackTargetValue, tLimit, startT);
+                    // Search in a narrow window around estimate (e.g., +/- 0.6 days to be safe)
+                    // This avoids finding the 'previous cycle' root 30 days ago.
+                    const t1 = estimatedT.AddDays(-0.7);
+                    const t2 = estimatedT.AddDays(0.7);
+
+                    const event = Astronomy.Search(callback, t1, t2);
                     if (event) return event.date;
-                    return null;
+                    // Fallback to estimation if search fails (rare, close enough)
+                    return estimatedT.date;
                 }
 
                 function getAyanamsa(t) {
@@ -725,7 +727,10 @@
                 if (tithiNum === 15) { tithiName = data.tithi[14]; tithiIcon = "🌕"; } // Purnima
                 else if (tithiNum === 30) { tithiName = data.tithi[15]; tithiIcon = "🌑"; } // Amavasya
 
+                const tithiTip = "Tithi is the timestamp of the 12° angular step. Purnima (15th Tithi) starts at 168°, covering the final phase before the exact Full Moon (180°).";
                 document.getElementById('vedic-tithi').innerText = `${tithiIcon} ${tithiName}`;
+                document.getElementById('vedic-tithi').setAttribute('data-tip', tithiTip);
+
                 document.getElementById('vedic-paksha').innerText = paksha;
 
                 // Paksha Progress (approx)
@@ -740,28 +745,33 @@
                 const tithiCallback = (target) => (t) => {
                     let s; try { s = Astronomy.EclipticLongitude(Astronomy.Body.Sun, t); } catch (e) { s = Astronomy.SunPosition(t).elon; }
                     const m = Astronomy.EclipticLongitude(Astronomy.Body.Moon, t);
-                    let diff = m - s;
-                    if (diff < 0) diff += 360;
-                    return getAngleDiff(diff, target);
+                    let currentDiff = m - s;
+                    if (currentDiff < 0) currentDiff += 360;
+                    return getAngleDiff(currentDiff, target);
                 };
 
-                const tStart = findPriorCrossing(time, tithiCallback(targetDiffStart), 15);
-                const tEnd = findNextCrossing(time, tithiCallback(targetDiffEnd), 15);
+                // Rate: ~12.19 deg/day
+                const TITHI_RATE = 12.1907;
+                // currentVal for Tithi is 'diff' (Moon-Sun)
+                const tStart = findCrossingEfficient(time, diff, targetDiffStart, TITHI_RATE, tithiCallback(targetDiffStart));
+                const tEnd = findCrossingEfficient(time, diff, targetDiffEnd, TITHI_RATE, tithiCallback(targetDiffEnd));
 
                 let tRange = "--";
                 if (tStart && tEnd) tRange = `${formatTime(tStart)} - ${formatTime(tEnd)}`;
                 else if (tEnd) tRange = `Ends: ${formatTime(tEnd)}`;
-                else tRange = "Calc..."; // Debug indicator if fails
                 document.getElementById('vedic-tithi-end').innerText = tRange;
 
                 // Paksha Start/End
-                // Shukla (0-180deg). Krishna (180-360deg).
                 const pakshaStartDiff = isShukla ? 0 : 180;
-                const pakshaEndDiff = isShukla ? 180 : 0; // Fix: 360 wraps to 0 in diff
+                const pakshaEndDiff = isShukla ? 180 : 0;
 
-                // Reuse tithiCallback (which is just sun-moon diff)
-                const pStart = findPriorCrossing(time, tithiCallback(pakshaStartDiff), 20);
-                const pEnd = findNextCrossing(time, tithiCallback(pakshaEndDiff), 20);
+                // Paksha is 15 days roughly. But efficient finder works locally.
+                // We need to be careful. Paksha start might be 14 days ago.
+                // 'diff' is currently e.g. 170 (Shukla Chaturdashi). Target 0.
+                // delta = 170. daysOffset = 170/12.19 ~= 14 days. 
+                // Efficient finder handles this perfectly!
+                const pStart = findCrossingEfficient(time, diff, pakshaStartDiff, TITHI_RATE, tithiCallback(pakshaStartDiff));
+                const pEnd = findCrossingEfficient(time, diff, pakshaEndDiff, TITHI_RATE, tithiCallback(pakshaEndDiff));
 
                 if (pStart && pEnd) document.getElementById('vedic-paksha-end').innerText = `${formatTime(pStart)} - ${formatTime(pEnd)}`;
                 else if (pEnd) document.getElementById('vedic-paksha-end').innerText = `Ends: ${formatTime(pEnd)}`;
@@ -776,15 +786,14 @@
                 const nakProgress = ((siderealLon % nakshatraDuration) / nakshatraDuration) * 100;
                 document.getElementById('progress-nakshatra').style.width = `${nakProgress}%`;
 
-                // Detailed tooltips for Nakshatra on VALUE
                 const nData = NAKSHATRA_DATA[nakshatraIndex];
                 let nStr = `✨ ${data.nakshatra[nakshatraIndex] || "Unknown"}`;
+                let nTip = `Nakshatra is defined by Moon's position in 27 sectors (13°20' each). Changes approx every 1 day.`;
                 if (nData) {
                     nStr += ` (${nData.star})`;
-                    const nTip = `Star: ${nData.star}\nConstellation: ${nData.con}\nMag: ${nData.mag}, Dist: ${nData.dist}`;
-                    document.getElementById('vedic-nakshatra').setAttribute('data-tip', nTip);
+                    nTip += `\nStar: ${nData.star}\nConstellation: ${nData.con}\nMag: ${nData.mag}, Dist: ${nData.dist}`;
                 }
-
+                document.getElementById('vedic-nakshatra').setAttribute('data-tip', nTip);
                 document.getElementById('vedic-nakshatra').innerText = nStr;
 
                 // Nakshatra Ends
@@ -799,8 +808,9 @@
                     return getAngleDiff(sd, target);
                 };
 
-                const nStart = findPriorCrossing(time, nakCallback(nakStartLon), 15);
-                const nEnd = findNextCrossing(time, nakCallback(nakEndLon), 15);
+                const MOON_Rate = 13.176; // deg/day
+                const nStart = findCrossingEfficient(time, siderealLon, nakStartLon, MOON_Rate, nakCallback(nakStartLon));
+                const nEnd = findCrossingEfficient(time, siderealLon, nakEndLon, MOON_Rate, nakCallback(nakEndLon));
 
                 let nRange = "--";
                 if (nStart && nEnd) nRange = `${formatTime(nStart)} - ${formatTime(nEnd)}`;
@@ -826,8 +836,11 @@
                 const mrStartLon = moonRashiIndex * 30;
                 const mrEndLon = (moonRashiIndex + 1) * 30;
 
-                const mrStart = findPriorCrossing(time, rashiCallback(mrStartLon), 15);
-                const mrEnd = findNextCrossing(time, rashiCallback(mrEndLon), 15);
+                const mrStart = findCrossingEfficient(time, siderealLon, mrStartLon, MOON_Rate, rashiCallback(mrStartLon));
+                const mrEnd = findCrossingEfficient(time, siderealLon, mrEndLon, MOON_Rate, rashiCallback(mrEndLon));
+
+                const rashiTip = "Chandra Rashi is the Moon Sign, defined by Moon's position in 30° sectors. Changes approx every 2.5 days.";
+                document.getElementById('vedic-moon-rashi').setAttribute('data-tip', rashiTip);
 
                 let mrRange = "--";
                 if (mrStart && mrEnd) mrRange = `${formatTime(mrStart)} - ${formatTime(mrEnd)}`;
@@ -849,22 +862,21 @@
                 // Masa Progress (Approx Sun progress in Rashi)
                 document.getElementById('progress-masa').style.width = `${sunRashiProgress}%`;
 
-                // Sun Rashi End (approx 30 days)
-                // Sun Rashi End (approx 30 days)
+                // Sun Rashi Start/End
                 const srCallback = (target) => (t) => {
                     let s; try { s = Astronomy.EclipticLongitude(Astronomy.Body.Sun, t); } catch (e) { s = Astronomy.SunPosition(t).elon; }
                     const ay = getAyanamsa(t);
                     let sd = s - ay;
                     if (sd < 0) sd += 360;
-                    let val = sd - target;
-                    if (Math.abs(val) > 180) val = val > 0 ? val - 360 : val + 360;
-                    return val;
+                    return getAngleDiff(sd, target);
                 }
                 const sunStartLon = rashiIndex * 30;
                 const sunEndLon = (rashiIndex + 1) * 30;
 
-                const sStart = findPriorCrossing(time, srCallback(sunStartLon), 35);
-                const sEnd = findNextCrossing(time, srCallback(sunEndLon), 35);
+                const SUN_RATE = 0.9856; // deg/day
+
+                const sStart = findCrossingEfficient(time, sunSidereal, sunStartLon, SUN_RATE, srCallback(sunStartLon));
+                const sEnd = findCrossingEfficient(time, sunSidereal, sunEndLon, SUN_RATE, srCallback(sunEndLon));
 
                 if (sStart && sEnd) {
                     // Use forceDate=true (default)
