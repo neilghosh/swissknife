@@ -202,21 +202,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     const titleEl = channel.querySelector('title');
                     if (titleEl) feedTitle = titleEl.textContent;
 
+                    const deriveTitle = (desc, fallback) => {
+                        const cleaned = (desc || '').replace(/[\n\r]+/g, ' ').trim();
+                        const words = cleaned.split(/\s+/).filter(Boolean);
+                        if (words.length >= 5) {
+                            return words.slice(0, Math.min(10, words.length)).join(' ');
+                        }
+                        if (words.length > 0) return words.join(' ');
+                        return fallback;
+                    };
+
                     const items = Array.from(xmlDoc.querySelectorAll('item'));
                     episodes = items.map((item, idx) => {
                         const enclosure = item.querySelector('enclosure');
                         const audioUrl = enclosure ? enclosure.getAttribute('url') : null;
-                        const title = item.querySelector('title')?.textContent || `Episode ${idx + 1}`;
+                        const rawTitle = item.querySelector('title')?.textContent || `Episode ${idx + 1}`;
                         const pubDate = item.querySelector('pubDate')?.textContent || '';
-                        return { title, audioUrl, pubDate };
+                        const description = item.querySelector('description')?.textContent || '';
+                        const derivedTitle = deriveTitle(description, rawTitle);
+                        const displayDate = pubDate ? new Date(pubDate).toLocaleString() : '';
+                        return { title: derivedTitle, audioUrl, pubDate, displayDate };
                     }).filter(ep => !!ep.audioUrl);
 
                     episodeCount = episodes.length;
                     if (episodes.length > 0) {
-                        const pubDate = episodes[0].pubDate;
-                        if (pubDate) {
-                            latestEpisode = new Date(pubDate).toLocaleString();
-                        }
+                        latestEpisode = episodes[0].displayDate;
                     }
                 }
             }
@@ -253,15 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <div id="player-inline" style="margin-top: 10px; display: ${episodeCount > 0 ? 'block' : 'none'};"></div>
 
-                <div class="episode-list" style="margin-top: 15px; text-align: left;">
-                    ${episodeCount > 0 ? episodes.slice(0, 5).map((ep, idx) => `
-                        <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
-                            <div style="font-weight: 600;">${ep.title}</div>
-                            <div style="font-size: 0.9rem; color: #666;">${ep.pubDate ? new Date(ep.pubDate).toLocaleString() : ''}</div>
-                            <div><a href="${ep.audioUrl}" target="_blank" style="color: #667eea; font-size: 0.9rem;">Open audio</a></div>
-                        </div>
-                    `).join('') : ''}
-                </div>
             </div>
         `;
 
@@ -275,13 +276,17 @@ document.addEventListener('DOMContentLoaded', () => {
             playerInline.innerHTML = `
                 <div class="inline-player">
                     <div class="inline-player-title">Now playing: ${ep.title}</div>
+                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">${ep.displayDate || ''}</div>
                     <audio controls style="width: 100%;">
                         <source src="${ep.audioUrl}" type="audio/wav">
                         Your browser does not support the audio element.
                     </audio>
-                    <div class="episode-chips">
-                        ${episodes.slice(0, 5).map((e, i) => `
-                            <button class="chip ${i === idx ? 'chip-active' : ''}" data-ep="${i}">${e.title}</button>
+                    <div class="episode-chips" style="margin-top: 12px;">
+                        ${episodes.map((e, i) => `
+                            <button class="chip ${i === idx ? 'chip-active' : ''}" data-ep="${i}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 160px;">
+                                <span style="font-weight: 600;">${e.title}</span>
+                                <span style="font-size: 0.85rem; color: #666;">${e.displayDate || ''}</span>
+                            </button>
                         `).join('')}
                     </div>
                 </div>
