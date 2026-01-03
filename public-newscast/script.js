@@ -130,7 +130,11 @@ document.addEventListener('DOMContentLoaded', () => {
         generateBtn.disabled = true;
         generateText.style.display = 'none';
         generateLoading.style.display = 'inline-flex';
-        errorMessage.style.display = 'none';
+
+        const estMins = Math.ceil((duration * 0.3) + 2);
+        errorMessage.style.display = 'block';
+        errorMessage.style.color = '#666';
+        errorMessage.textContent = `⏳ Est. wait: ~${estMins} mins. You can close this window; the podcast will appear in your RSS feed.`;
 
         try {
             const idToken = await currentUser.getIdToken();
@@ -293,19 +297,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="inline-player-title">Now playing: ${ep.title}</div>
                     <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">${ep.displayDate || ''}</div>
                     <audio controls style="width: 100%;">
-                        <source src="${ep.audioUrl}" type="audio/wav">
+                        <source src="${ep.audioUrl}" type="${ep.audioUrl.endsWith('.m4a') ? 'audio/x-m4a' : 'audio/wav'}">
                         Your browser does not support the audio element.
                     </audio>
                     <div class="episode-chips" style="margin-top: 12px;">
                         ${visible.map((e, i) => {
-                            const globalIndex = sliceStart + i;
-                            return `
+                const globalIndex = sliceStart + i;
+                return `
                             <button class="chip ${globalIndex === idx ? 'chip-active' : ''}" data-ep="${globalIndex}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 160px;">
                                 <span style="font-weight: 600;">${e.title}</span>
                                 <span style="font-size: 0.85rem; color: #666;">${e.displayDate || ''}</span>
                             </button>
                             `;
-                        }).join('')}
+            }).join('')}
                     </div>
                 </div>
             `;
