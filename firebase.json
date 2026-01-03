@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": [
     {
       "public": "public",
@@ -74,6 +77,29 @@
           "destination": "/index.html"
         }
       ]
+    },
+    {
+      "public": "public-newscast",
+      "site": "newscast",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
-  ]
+  ],
+  "emulators": {
+    "hosting": {
+      "port": 5005
+    },
+    "ui": {
+      "enabled": true
+    }
+  }
 }

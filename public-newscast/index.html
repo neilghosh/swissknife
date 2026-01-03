@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsCast - AI-Powered News Podcasts</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ NewsCast</h1>
+            <p class="tagline">Your personalized AI news podcast</p>
+        </header>
+
+        <!-- Auth Section -->
+        <div id="auth-section" class="card">
+            <div id="signed-out" style="display: none;">
+                <h2>Sign In to Get Started</h2>
+                <button id="sign-in-btn" class="btn btn-primary">
+                    <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+                        <g fill="none" fill-rule="evenodd">
+                            <path d="M17.6 9.2l-.1-1.8H9v3.4h4.8C13.6 12 13 13 12 13.6v2.2h3a8.8 8.8 0 0 0 2.6-6.6z"
+                                fill="#4285F4" />
+                            <path d="M9 18c2.4 0 4.5-.8 6-2.2l-3-2.2a5.4 5.4 0 0 1-8-2.9H1V13a9 9 0 0 0 8 5z"
+                                fill="#34A853" />
+                            <path d="M4 10.7a5.4 5.4 0 0 1 0-3.4V5H1a9 9 0 0 0 0 8l3-2.3z" fill="#FBBC05" />
+                            <path d="M9 3.6c1.3 0 2.5.4 3.4 1.3L15 2.3A9 9 0 0 0 1 5l3 2.4a5.4 5.4 0 0 1 5-3.7z"
+                                fill="#EA4335" />
+                        </g>
+                    </svg>
+                    Sign in with Google
+                </button>
+            </div>
+            <div id="signed-in" style="display: none;">
+                <div class="user-info">
+                    <img id="user-photo" class="user-avatar" alt="User">
+                    <div>
+                        <div id="user-name" class="user-name"></div>
+                        <div id="user-email" class="user-email"></div>
+                    </div>
+                    <button id="sign-out-btn" class="btn btn-secondary">Sign Out</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Podcast Generator -->
+        <div id="generator-section" class="card" style="display: none;">
+            <h2>Create Your Podcast</h2>
+
+            <div class="form-group">
+                <label>Duration</label>
+                <select id="duration" class="input">
+                    <option value="2">2 minutes</option>
+                    <option value="5" selected>5 minutes</option>
+                    <option value="10">10 minutes</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Topics</label>
+                <div class="topics-grid">
+                    <label class="topic-checkbox">
+                        <input type="checkbox" value="Technology" checked>
+                        <span>💻 Technology</span>
+                    </label>
+                    <label class="topic-checkbox">
+                        <input type="checkbox" value="Space">
+                        <span>🚀 Space</span>
+                    </label>
+                    <label class="topic-checkbox">
+                        <input type="checkbox" value="Cricket">
+                        <span>🏏 Cricket</span>
+                    </label>
+                    <label class="topic-checkbox">
+                        <input type="checkbox" value="Business">
+                        <span>📈 Business</span>
+                    </label>
+                    <label class="topic-checkbox">
+                        <input type="checkbox" value="Science">
+                        <span>🔬 Science</span>
+                    </label>
+                    <label class="topic-checkbox">
+                        <input type="checkbox" value="AI">
+                        <span>🤖 AI</span>
+                    </label>
+                </div>
+            </div>
+
+            <button id="generate-btn" class="primary-btn">
+                <span id="generate-text">Generate Podcast</span>
+                <span id="generate-loading" class="spinner" style="display: none;"></span>
+            </button>
+
+            <p id="error-message" class="error-message" style="display: none;"></p>
+        </div>
+
+        <div id="podcasts-section" class="card" style="display: none;">
+            <h2>Your Podcasts</h2>
+            <div id="podcasts-list" class="podcasts-list">
+                <!-- Podcasts will appear here -->
+            </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div id="player-section" class="card" style="display: none;">
+            <h2>Your Podcast</h2>
+            <div class="player-container">
+                <audio id="audio-player" controls>
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="player-actions">
+                    <a id="download-audio" class="btn btn-secondary" download>
+                        📥 Download Audio
+                    </a>
+                    <a id="download-transcript" class="btn btn-secondary" download>
+                        📄 Download Transcript
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module" src="script.js?v=3"></script>
+</body>
+
+</html>
