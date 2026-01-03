@@ -4,7 +4,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 
 const firebaseConfig = {
     apiKey: "AIzaSyARwa2-gSUmn-3pZDs72omTrPrmUQyie3k",
-    authDomain: "swiss-knife-c662b.firebaseapp.com",
+    authDomain: "newscast.web.app",
     projectId: "swiss-knife-c662b",
     storageBucket: "swiss-knife-c662b.firebasestorage.app",
     messagingSenderId: "458006837722",
