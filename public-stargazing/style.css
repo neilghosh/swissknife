@@ -1,0 +1,338 @@
+body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0f172a;
+    /* Dark blue/slate background */
+    color: #e2e8f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+    padding: 1rem;
+}
+
+.container {
+    padding: 2rem;
+    background: #1e293b;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+    width: 100%;
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #38bdf8;
+    /* Light blue */
+}
+
+h2 {
+    font-size: 1.2rem;
+    color: #94a3b8;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 0.5rem;
+}
+
+.time-box {
+    background: #334155;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.time-label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+}
+
+.time-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.data-section {
+    margin-top: 1.5rem;
+    border-top: 1px solid #334155;
+    padding-top: 1.5rem;
+}
+
+.btn {
+    background: #38bdf8;
+    color: #0f172a;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background: #0ea5e9;
+}
+
+.hidden {
+    display: none;
+}
+
+.solar-event {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* Changed to align-start for multiline */
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #1e293b;
+    flex-wrap: wrap;
+    /* Allow wrapping */
+}
+
+.solar-value-container {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.solar-label {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.bedic-time-range {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* Custom Tooltip */
+.tooltip-container {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dotted #94a3b8;
+}
+
+.tooltip-container:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #334155;
+    color: #fff;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 5px;
+}
+
+.vedic-progress-bg {
+    width: 100px;
+    height: 4px;
+    background: #334155;
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.vedic-progress-fill {
+    height: 100%;
+    background: #38bdf8;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.vedic-header-date {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #334155;
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, minmax(110px, auto));
+    /* Taller rows */
+    gap: 2px;
+    background: #334155;
+    /* Border color */
+    margin-top: 1rem;
+    border: 2px solid #334155;
+    font-size: 0.85rem;
+}
+
+.chart-cell {
+    background: #1e293b;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.chart-cell-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+}
+
+.chart-planets {
+    display: flex;
+    flex-direction: column;
+    /* Stack planets vertically */
+    gap: 2px;
+    align-content: center;
+}
+
+.planet-icon {
+    font-size: 1rem;
+    /* Larger icon */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* Center hole */
+.chart-center {
+    grid-column: 2 / span 2;
+    grid-row: 2 / span 2;
+    background: #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: #64748b;
+    text-align: center;
+    padding: 1rem;
+}
+
+.sign-11 {
+    grid-area: 1 / 1 / 2 / 2;
+}
+
+.sign-0 {
+    grid-area: 1 / 2 / 2 / 3;
+}
+
+.sign-1 {
+    grid-area: 1 / 3 / 2 / 4;
+}
+
+.sign-2 {
+    grid-area: 1 / 4 / 2 / 5;
+}
+
+.sign-3 {
+    grid-area: 2 / 4 / 3 / 5;
+}
+
+.sign-4 {
+    grid-area: 3 / 4 / 4 / 5;
+}
+
+.sign-5 {
+    grid-area: 4 / 4 / 5 / 5;
+}
+
+.sign-6 {
+    grid-area: 4 / 3 / 5 / 4;
+}
+
+.sign-7 {
+    grid-area: 4 / 2 / 5 / 3;
+}
+
+.sign-8 {
+    grid-area: 4 / 1 / 5 / 2;
+}
+
+.sign-9 {
+    grid-area: 3 / 1 / 4 / 2;
+}
+
+.sign-10 {
+    grid-area: 2 / 1 / 3 / 2;
+}
+
+/* SEO and Layout adjustments */
+.external-links {
+    margin-top: 2rem;
+    border-top: 1px solid #334155;
+    padding-top: 1rem;
+    font-size: 0.9rem;
+}
+
+#skymap-container {
+    width: 100%;
+    height: 350px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.weather-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+}
+
+.weather-item {
+    background: #1e293b;
+    padding: 0.8rem;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.map-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+}
+
+.map-controls button {
+    width: 36px;
+    height: 36px;
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(4px);
+    color: #38bdf8;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.2s;
+}
+
+.map-controls button:hover {
+    background: #38bdf8;
+    color: #0f172a;
+    border-color: #38bdf8;
+}
