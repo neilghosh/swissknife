@@ -203,8 +203,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (titleEl) feedTitle = titleEl.textContent;
 
                     const deriveTitle = (desc, fallback) => {
-                        const cleaned = (desc || '').replace(/[\n\r]+/g, ' ').trim();
-                        const words = cleaned.split(/\s+/).filter(Boolean);
+                        const cleaned = (desc || '')
+                            .replace(/[\n\r]+/g, ' ')
+                            .replace(/\b(John|Rebecca)\s*:\s*/gi, '')
+                            .trim();
+
+                        const sentences = cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
+                        const candidate = sentences.length ? sentences[0] : cleaned;
+
+                        const words = candidate.split(/\s+/).filter(Boolean);
                         if (words.length >= 5) {
                             return words.slice(0, Math.min(10, words.length)).join(' ');
                         }
