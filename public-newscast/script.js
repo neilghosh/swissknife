@@ -98,6 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
     signInBtn.addEventListener('click', async () => {
         try {
             await signInWithPopup(auth, provider);
+            if (typeof gtag === 'function') {
+                gtag('event', 'login', { method: 'Google' });
+            }
         } catch (error) {
             showError('Failed to sign in. Please try again.');
         }
@@ -106,6 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
     signOutBtn.addEventListener('click', async () => {
         try {
             await signOut(auth);
+            if (typeof gtag === 'function') {
+                gtag('event', 'logout');
+            }
         } catch (error) {
             console.error('Sign out error:', error);
         }
@@ -138,6 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const idToken = await currentUser.getIdToken();
+
+            if (typeof gtag === 'function') {
+                gtag('event', 'generate_podcast', {
+                    duration: duration,
+                    topics_count: topics.length,
+                    topics: topics.join(',')
+                });
+            }
 
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -328,6 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     page = 0;
                     renderPlayer(0);
                     renderPagination();
+
+                    if (typeof gtag === 'function') {
+                        gtag('event', 'click_listen_now');
+                    }
                 } else {
                     alert('No episodes yet. Generate one to start listening.');
                 }
@@ -344,6 +362,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('rss-url-input');
         input.select();
         document.execCommand('copy');
+
+        if (typeof gtag === 'function') {
+            gtag('event', 'copy_rss_url');
+        }
+
         alert('✅ RSS URL copied to clipboard!');
     };
 });
