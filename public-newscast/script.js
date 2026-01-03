@@ -46,6 +46,32 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(() => console.log('Persistence set to local'))
         .catch((error) => showError(`Auth Error: ${error.message}`));
 
+    // Add dynamic location-based topics
+    const topicsGrid = document.querySelector('.topics-grid');
+    const addTopic = (label, value, checked = false) => {
+        if (!topicsGrid) return;
+        const labelEl = document.createElement('label');
+        labelEl.className = 'topic-checkbox';
+        labelEl.innerHTML = `
+            <input type="checkbox" value="${value}" ${checked ? 'checked' : ''}>
+            <span>${label}</span>
+        `;
+        topicsGrid.appendChild(labelEl);
+    };
+
+    (async () => {
+        try {
+            const res = await fetch('https://ipapi.co/json/');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.country_name) addTopic(`🇨🇴 ${data.country_name} news`, `${data.country_name} news`, true);
+                if (data.city) addTopic(`🏙️ ${data.city} news`, `${data.city} news`);
+            }
+        } catch (e) {
+            console.log('Location topics fetch failed', e);
+        }
+    })();
+
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
@@ -151,15 +177,21 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showRssFeedInfo(uid) {
         const podcastsList = document.getElementById('podcasts-list');
         const bucketName = 'swiss-knife-c662b.firebasestorage.app';
-        const rssUrl = userRssUrl || `https://storage.googleapis.com/${bucketName}/users/${uid}/rss.xml`;
+        // Use Firebase Storage API URL (CORS-respecting) with cache-buster
+        const ts = Date.now();
+        const encodedPath = encodeURIComponent(`users/${uid}/rss.xml`);
+        // Use JSON API download endpoint which returns proper CORS headers
+        const defaultRssUrl = `https://storage.googleapis.com/download/storage/v1/b/${bucketName}/o/${encodedPath}?alt=media&ts=${ts}`;
+        const rssUrl = userRssUrl ? `${userRssUrl}?ts=${ts}` : defaultRssUrl;
 
         // Try to fetch RSS feed to get statistics
         let episodeCount = 0;
         let feedTitle = "Your Personal Podcast Feed";
         let latestEpisode = null;
 
+        let episodes = [];
         try {
-            const response = await fetch(rssUrl);
+            const response = await fetch(rssUrl, { cache: 'no-store' });
             if (response.ok) {
                 const xmlText = await response.text();
                 const parser = new DOMParser();
@@ -170,14 +202,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     const titleEl = channel.querySelector('title');
                     if (titleEl) feedTitle = titleEl.textContent;
 
-                    const items = xmlDoc.querySelectorAll('item');
-                    episodeCount = items.length;
+                    const items = Array.from(xmlDoc.querySelectorAll('item'));
+                    episodes = items.map((item, idx) => {
+                        const enclosure = item.querySelector('enclosure');
+                        const audioUrl = enclosure ? enclosure.getAttribute('url') : null;
+                        const title = item.querySelector('title')?.textContent || `Episode ${idx + 1}`;
+                        const pubDate = item.querySelector('pubDate')?.textContent || '';
+                        return { title, audioUrl, pubDate };
+                    }).filter(ep => !!ep.audioUrl);
 
-                    if (items.length > 0) {
-                        const firstItem = items[0];
-                        const pubDate = firstItem.querySelector('pubDate');
+                    episodeCount = episodes.length;
+                    if (episodes.length > 0) {
+                        const pubDate = episodes[0].pubDate;
                         if (pubDate) {
-                            latestEpisode = new Date(pubDate.textContent).toLocaleString();
+                            latestEpisode = new Date(pubDate).toLocaleString();
                         }
                     }
                 }
@@ -202,19 +240,70 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `}
                 <p style="margin-bottom: 20px;">Subscribe to your RSS feed in any podcast app:</p>
-                <div class="rss-url-box" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <input type="text" readonly value="${rssUrl}" id="rss-url-input" 
-                           style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 14px;" />
-                    <button onclick="copyRssUrl()" class="btn btn-primary" 
-                            style="margin-top: 10px; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        Copy RSS URL
-                    </button>
+                <div class="rss-actions">
+                    <div class="rss-actions-row">
+                        <button id="listen-now-btn" class="btn btn-primary" ${episodeCount === 0 ? 'disabled' : ''}>▶ Listen now</button>
+                        <button onclick="copyRssUrl()" class="btn btn-secondary">Copy RSS URL</button>
+                    </div>
+                    <div class="rss-url-box" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <input type="text" readonly value="${rssUrl}" id="rss-url-input" 
+                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 14px;" />
+                    </div>
                 </div>
-                <p style="margin-top: 15px; color: #666; font-size: 14px;">
-                    📱 Paste this URL into your favorite podcast app (Apple Podcasts, Spotify, Overcast, etc.) to automatically receive new episodes!
-                </p>
+
+                <div id="player-inline" style="margin-top: 10px; display: ${episodeCount > 0 ? 'block' : 'none'};"></div>
+
+                <div class="episode-list" style="margin-top: 15px; text-align: left;">
+                    ${episodeCount > 0 ? episodes.slice(0, 5).map((ep, idx) => `
+                        <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                            <div style="font-weight: 600;">${ep.title}</div>
+                            <div style="font-size: 0.9rem; color: #666;">${ep.pubDate ? new Date(ep.pubDate).toLocaleString() : ''}</div>
+                            <div><a href="${ep.audioUrl}" target="_blank" style="color: #667eea; font-size: 0.9rem;">Open audio</a></div>
+                        </div>
+                    `).join('') : ''}
+                </div>
             </div>
         `;
+
+        // Inline player rendering
+        const playerInline = document.getElementById('player-inline');
+        const listenBtn = document.getElementById('listen-now-btn');
+
+        const renderPlayer = (idx = 0) => {
+            if (!playerInline || !episodes.length || !episodes[idx]) return;
+            const ep = episodes[idx];
+            playerInline.innerHTML = `
+                <div class="inline-player">
+                    <div class="inline-player-title">Now playing: ${ep.title}</div>
+                    <audio controls style="width: 100%;">
+                        <source src="${ep.audioUrl}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div class="episode-chips">
+                        ${episodes.slice(0, 5).map((e, i) => `
+                            <button class="chip ${i === idx ? 'chip-active' : ''}" data-ep="${i}">${e.title}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            playerInline.querySelectorAll('button[data-ep]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const nextIdx = parseInt(btn.getAttribute('data-ep'));
+                    renderPlayer(nextIdx);
+                });
+            });
+            playerInline.style.display = 'block';
+        };
+
+        if (listenBtn) {
+            listenBtn.addEventListener('click', () => {
+                if (episodes.length) {
+                    renderPlayer(0);
+                } else {
+                    alert('No episodes yet. Generate one to start listening.');
+                }
+            });
+        }
     }
 
     window.copyRssUrl = function () {

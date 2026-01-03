@@ -89,6 +89,15 @@ header h1 {
     color: white;
 }
 
+#generate-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 1.05rem;
+    padding: 14px 20px;
+    letter-spacing: 0.2px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+}
+
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
@@ -101,6 +110,55 @@ header h1 {
 
 .btn-secondary:hover {
     background: #e0e0e0;
+}
+
+.rss-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.rss-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.inline-player {
+    margin-top: 15px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f9f9ff;
+}
+
+.inline-player-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.episode-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.chip {
+    padding: 6px 10px;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.chip-active {
+    border-color: #667eea;
+    color: #667eea;
+    background: #eef0ff;
 }
 
 .btn-large {
