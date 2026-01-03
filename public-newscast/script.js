@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.ok) {
                 const data = await res.json();
                 if (data.country_name) addTopic(`🇨🇴 ${data.country_name} news`, `${data.country_name} news`, true);
-                if (data.city) addTopic(`🏙️ ${data.city} news`, `${data.city} news`);
+                if (data.city) addTopic(`🏙️ ${data.city} news`, `${data.city} news`, true);
             }
         } catch (e) {
             console.log('Location topics fetch failed', e);
@@ -202,23 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const titleEl = channel.querySelector('title');
                     if (titleEl) feedTitle = titleEl.textContent;
 
-                    const deriveTitle = (desc, fallback) => {
-                        const cleaned = (desc || '')
-                            .replace(/[\n\r]+/g, ' ')
-                            .replace(/\b(John|Rebecca)\s*:\s*/gi, '')
-                            .trim();
-
-                        const sentences = cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
-                        const candidate = sentences.length ? sentences[0] : cleaned;
-
-                        const words = candidate.split(/\s+/).filter(Boolean);
-                        if (words.length >= 5) {
-                            return words.slice(0, Math.min(10, words.length)).join(' ');
-                        }
-                        if (words.length > 0) return words.join(' ');
-                        return fallback;
-                    };
-
                     const items = Array.from(xmlDoc.querySelectorAll('item'));
                     episodes = items.map((item, idx) => {
                         const enclosure = item.querySelector('enclosure');
@@ -226,9 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const rawTitle = item.querySelector('title')?.textContent || `Episode ${idx + 1}`;
                         const pubDate = item.querySelector('pubDate')?.textContent || '';
                         const description = item.querySelector('description')?.textContent || '';
-                        const derivedTitle = deriveTitle(description, rawTitle);
+                        const titleText = rawTitle || description || `Episode ${idx + 1}`;
                         const displayDate = pubDate ? new Date(pubDate).toLocaleString() : '';
-                        return { title: derivedTitle, audioUrl, pubDate, displayDate };
+                        return { title: titleText, audioUrl, pubDate, displayDate };
                     }).filter(ep => !!ep.audioUrl);
 
                     episodeCount = episodes.length;
@@ -269,16 +252,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div id="player-inline" style="margin-top: 10px; display: ${episodeCount > 0 ? 'block' : 'none'};"></div>
+                <div id="pagination-controls" style="margin-top: 12px; display: ${episodeCount > 5 ? 'flex' : 'none'}; gap: 10px; justify-content: center; align-items: center;"></div>
 
             </div>
         `;
 
         // Inline player rendering
         const playerInline = document.getElementById('player-inline');
+        const pagination = document.getElementById('pagination-controls');
         const listenBtn = document.getElementById('listen-now-btn');
 
+        let page = 0;
+        const pageSize = 5;
+        const totalPages = Math.max(1, Math.ceil(episodes.length / pageSize));
+
+        const renderPagination = () => {
+            if (!pagination) return;
+            const prevDisabled = page === 0;
+            const nextDisabled = page >= totalPages - 1;
+            pagination.innerHTML = `
+                <button class="btn btn-secondary" id="ep-prev" ${prevDisabled ? 'disabled' : ''}>◀ Prev</button>
+                <span style="font-size: 0.95rem; color: #555;">Page ${page + 1} of ${totalPages}</span>
+                <button class="btn btn-secondary" id="ep-next" ${nextDisabled ? 'disabled' : ''}>Next ▶</button>
+            `;
+            const prev = document.getElementById('ep-prev');
+            const next = document.getElementById('ep-next');
+            if (prev) prev.onclick = () => { if (page > 0) { page -= 1; renderPlayer(page * pageSize); renderPagination(); } };
+            if (next) next.onclick = () => { if (page < totalPages - 1) { page += 1; renderPlayer(page * pageSize); renderPagination(); } };
+        };
+
         const renderPlayer = (idx = 0) => {
-            if (!playerInline || !episodes.length || !episodes[idx]) return;
+            if (!playerInline || !episodes.length) return;
+            if (!episodes[idx]) idx = page * pageSize;
+            if (!episodes[idx]) idx = 0;
+            const sliceStart = page * pageSize;
+            const visible = episodes.slice(sliceStart, sliceStart + pageSize);
             const ep = episodes[idx];
             playerInline.innerHTML = `
                 <div class="inline-player">
@@ -289,12 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         Your browser does not support the audio element.
                     </audio>
                     <div class="episode-chips" style="margin-top: 12px;">
-                        ${episodes.map((e, i) => `
-                            <button class="chip ${i === idx ? 'chip-active' : ''}" data-ep="${i}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 160px;">
+                        ${visible.map((e, i) => {
+                            const globalIndex = sliceStart + i;
+                            return `
+                            <button class="chip ${globalIndex === idx ? 'chip-active' : ''}" data-ep="${globalIndex}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 160px;">
                                 <span style="font-weight: 600;">${e.title}</span>
                                 <span style="font-size: 0.85rem; color: #666;">${e.displayDate || ''}</span>
                             </button>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -310,11 +321,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (listenBtn) {
             listenBtn.addEventListener('click', () => {
                 if (episodes.length) {
+                    page = 0;
                     renderPlayer(0);
+                    renderPagination();
                 } else {
                     alert('No episodes yet. Generate one to start listening.');
                 }
             });
+        }
+
+        renderPagination();
+        if (episodes.length) {
+            renderPlayer(page * pageSize);
         }
     }
 
